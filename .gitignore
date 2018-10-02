@@ -1,0 +1,6 @@
+*.sublime-workspace
+**/sim_xm/xcelium.d
+**/sim_xm/.simvision
+*.log
+*.history
+*.key

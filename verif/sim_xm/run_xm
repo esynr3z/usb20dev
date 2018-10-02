@@ -1,0 +1,108 @@
+#!/bin/bash
+
+# run_xm: Script to run all of Xcellium
+
+# Default parameters
+TESTBENCH=""
+USERDEFINE=""
+SEED="12345678"
+COVERAGE="DISABLE"
+BATCHMODE="DISABLE"
+EXIT_ON_STOP="DISABLE"
+
+# Functions
+function clear_work {
+               rm -rf *.log log.* INCA_libs *.key waves.shm .simvision .*.trace logfile *.diag probe *.dd
+           }
+
+# Parse options
+while getopts ":h:t:n:d:cbre" Option
+do
+  case $Option in
+    e) EXIT_ON_STOP="ENABLE";;
+    t) TESTBENCH=$OPTARG;;
+    n) SEED=$OPTARG;;
+    d) USERDEFINE=$OPTARG;;
+    c) COVERAGE="ENABLE";;
+    b) BATCHMODE="ENABLE";;
+    r)  echo "Clear all temp data in work directory..."
+        clear_work
+        echo "Done!"
+        exit 0
+        ;;
+    h | *)  echo "Usage: just type: \"bash run_xm\", and script will run with these parameters:"
+            echo "  TESTBENCH = ${TESTBENCH}"
+            echo "  COVERAGE = ${COVERAGE}"
+            echo "  BATCHMODE = ${BATCHMODE}"
+            echo "  EXIT_ON_STOP = ${EXIT_ON_STOP}"
+            echo ""
+            echo "To run yours own testbench just type: \"bash run_xm -t xxx\", where xxx - folder of your testbench in \"testbenches/xxx\""
+            echo ""
+            echo "Also you can run script with these arguments:"
+            echo ""
+            echo "  -d \$defines\$ :user defines. For example:"
+            echo "              bash run_xm -t example -d +define+USERDEF0+USERDEF1=20+USERDEF2"
+			echo ""
+            echo "  -e        :enable exit on \$stop. For example:"
+            echo "              bash run_xm -t example -e"
+            echo ""
+            echo "  -c        :enable coverage. For example:"
+            echo "              bash run_xm -t example -c"
+            echo ""
+            echo "  -b        :run ncsim in batch mode. For example:"
+            echo "              bash run_xm -t example -b"
+            echo ""
+            echo "  -n        :set seed for SV RNG. For example:"
+            echo "              bash run_xm -t example -n 12345467"
+            echo ""
+            echo "  -r        :clear all temp data. For example:"
+            echo "              bash run_xm -r"
+            exit 0
+            ;;
+  esac
+done
+if [ $OPTIND -eq 1 ]
+then
+    echo "Type \"bash run_xm -h\" to see how to use this script"
+    exit 0
+fi
+shift $(($OPTIND - 1))
+
+
+# Create parameters for xmverilog launch
+PARAMS="+xm64bit"
+if [[ ${BATCHMODE} == "DISABLE" ]]
+then
+    echo "BATCHMODE = DISABLE"
+    PARAMS="${PARAMS}  +gui"
+fi
+PARAMS="${PARAMS} +xmlicq +sv +access+rwc -timescale 1ns/1ps -V200X -nowarn ASSERT -nowarn NONPRT -NONTCGLITCH +define+SIM"
+PARAMS="${PARAMS} +xmsmartorder +xmv93"
+PARAMS="${PARAMS} +notimingchecks +nospecify"
+PARAMS="${PARAMS} -l tb.log"
+PARAMS="${PARAMS} +xmview+module"
+PARAMS="${PARAMS} -work worklib +xmtop+worklib.tb:module"
+PARAMS="${PARAMS} -f ../src.files"
+PARAMS="${PARAMS} ../testbenches/${TESTBENCH}/tb.sv"
+
+
+if [ ${COVERAGE} == "ENABLE" ]
+then
+    echo "COVERAGE = ENABLE"
+    clear_work
+    PARAMS="${PARAMS} +define+COVENABLE"
+    PARAMS="${PARAMS} +xmcovworkdir+./cov_work +xmcovtest+${TESTBENCH} +xmcovscope+DUT +xmcovdut+dut"
+    PARAMS="${PARAMS} +xmcoverage+all +xmcovfile+./covfile.ccf +xmcovoverwrite"
+fi
+#============ EXIT ON STOP =================
+if [ ${EXIT_ON_STOP} == "ENABLE" ]
+then
+    echo "EXIT_ON_STOP = ENABLE"
+    PARAMS="${PARAMS} +xmsimargs+-exit"
+fi
+PARAMS="${PARAMS} +xmsvseed+${SEED}"
+PARAMS="${PARAMS} ${USERDEFINE}"
+
+xmverilog `echo "${PARAMS}"` | tee run_xm.log
+
+exit 0

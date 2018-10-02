@@ -1,0 +1,17 @@
+{
+	"folders":
+	[
+		{
+			"name": "Sources",
+			"path": "../rtl"
+		},
+		{
+			"name": "Testbenches",
+			"path": "./testbenches"
+		},
+	],
+	"settings":
+	{
+		"tab_size": 4
+	}
+}
