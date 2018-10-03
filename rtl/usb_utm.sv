@@ -30,8 +30,8 @@ module usb_utm (
     input  bus8_t           data_in,       // USB data input bus
     input  logic            tx_valid,      // Transmit data on data_in bus is valid
     output logic            tx_ready,      // UTM ready to load transmit data into holding registers
-    input  bus8_t           data_out,      // USB data output bus
-    input  logic            rx_valid,      // data_out bus has valid data
+    output bus8_t           data_out,      // USB data output bus
+    output logic            rx_valid,      // data_out bus has valid data
     output logic            rx_active,     // Receive state machine is active
     output logic            rx_error       // Receive error detection
 );
