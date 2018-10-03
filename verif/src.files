@@ -1,4 +1,6 @@
 ../../rtl/usb_pkg.sv
-../../rtl/usb_utm_pkg.sv
+../../rtl/usb_utmi_pkg.sv
+../../rtl/usb_utmi_if.sv
+../../rtl/usb_fe_if.sv
 ../../rtl/usb.sv
 ../../rtl/usb_utm.sv

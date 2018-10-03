@@ -2,7 +2,7 @@
 // Package with global types and parameters
 //
 //------------------------------------------------------------------------------
-// 2018, Eden Synrez <esynr3z@gmail.com>
+// [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
 //==============================================================================
 
 package usb_pkg;
