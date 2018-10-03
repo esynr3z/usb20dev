@@ -1,6 +1,7 @@
 *.sublime-workspace
 **/sim_xm/xcelium.d
 **/sim_xm/.simvision
+**/sim_xm/waves.shm
 *.log
 *.history
 *.key
