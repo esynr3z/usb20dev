@@ -30,4 +30,4 @@ end
 
 `endif //STOP_TIME
 
-endmodule // tb
+endmodule : tb

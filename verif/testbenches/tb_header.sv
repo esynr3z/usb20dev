@@ -29,9 +29,13 @@ end
 //-----------------------------------------------------------------------------
 // DUT top
 //-----------------------------------------------------------------------------
+logic usb_dp_rx, usb_dn_rx;
+logic usb_dp_tx, usb_dn_tx;
+logic usb_tx_oen;
+
 usb dut (
     .clk_48m    (tb_clk),
-    .rst_n      (tb_rst_n),
+    .rst        (~tb_rst_n),
     .usb_dp_rx  (usb_dp_rx),
     .usb_dn_rx  (usb_dn_rx),
     .usb_dp_tx  (usb_dp_tx),
