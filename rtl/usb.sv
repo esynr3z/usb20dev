@@ -18,11 +18,11 @@ module usb (
 
 usb_utmi_if utmi();
 
-usb_utm utm (
-    .clk        ( clk_48m  ),
-    .rst        ( rst      ),
-    .fe_ctrl    ( fe_ctrl  ),
-    .utmi       ( utmi.utm )
+usb_utm utm(
+    .clk     (clk_48m),
+    .rst     (rst),
+    .fe_ctrl (fe_ctrl),
+    .utmi    (utmi.utm)
 );
 
 endmodule : usb

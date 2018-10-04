@@ -16,13 +16,13 @@ utmi_op_mode_t    op_mode;      // Operational modes control
 utmi_line_state_t line_state;   // Signal to reflect the current state of the recievers
 
 // data bus
-bus8_t           data_in;       // USB data input bus
-logic            tx_valid;      // Transmit data on data_in bus is valid
-logic            tx_ready;      // UTM ready to load transmit data into holding registers
-bus8_t           data_out;      // USB data output bus
-logic            rx_valid;      // data_out bus has valid data
-logic            rx_active;     // Receive state machine is active
-logic            rx_error;      // Receive error detection
+bus8_t            data_in;      // USB data input bus
+logic             tx_valid;     // Transmit data on data_in bus is valid
+logic             tx_ready;     // UTM ready to load transmit data into holding registers
+bus8_t            data_out;     // USB data output bus
+logic             rx_valid;     // data_out bus has valid data
+logic             rx_active;    // Receive state machine is active
+logic             rx_error;     // Receive error detection
 
 // USB Transceiver Macrocel side
 modport utm (

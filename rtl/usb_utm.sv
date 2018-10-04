@@ -12,13 +12,12 @@
 import usb_utmi_pkg::*;
 
 module usb_utm (
-    input  logic            clk,        // Clock
-    input  logic            rst,        // Asynchronous reset
+    input  logic    clk,        // Clock
+    input  logic    rst,        // Asynchronous reset
 
-    usb_fe_if.ctrl          fe_ctrl,    // USB frontend control
+    usb_fe_if.ctrl  fe_ctrl,    // USB frontend control
 
-    usb_utmi_if.utm         utmi        // UTMI
+    usb_utmi_if.utm utmi        // UTMI
 );
-
 
 endmodule : usb_utm
