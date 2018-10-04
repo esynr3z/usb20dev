@@ -4,8 +4,12 @@
 //------------------------------------------------------------------------------
 // [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
 //==============================================================================
+// USB FS 12.000 Mb/s +-0.25% (+-208ps)
+`define USB_PERIOD  83333   // ps
+`define USB_JIT     100     // ps   
 
-`define USB_PERIOD 83.333ns
+`define USB_PERIOD_DEL  ((`USB_PERIOD + ($urandom_range(0, `USB_JIT*2) - `USB_JIT))/1000.0)
+`define USB_PHASE_DEL   ($urandom_range(0,`USB_JIT*2)/1000.0)
 
 module usb_host (
     // USB lines
@@ -30,10 +34,19 @@ task send_raw_bit(
     input logic dp,
     input logic dn
 );
+bit jit_sel;
 begin
+    jit_sel = $urandom_range(0,1);
+
+    if (jit_sel) begin
         dp_tx <= dp;
+        #`USB_PHASE_DEL dn_tx <= dn;
+    end else begin
         dn_tx <= dn;
-        #`USB_PERIOD;
+        #`USB_PHASE_DEL dp_tx <= dp;
+    end
+    
+    #`USB_PERIOD_DEL;
 end
 endtask : send_raw_bit
 
