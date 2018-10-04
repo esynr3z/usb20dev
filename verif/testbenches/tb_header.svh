@@ -1,3 +1,12 @@
+//==============================================================================
+// Testbench header with instances and common signal declarations
+//
+//------------------------------------------------------------------------------
+// [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
+//==============================================================================
+
+`include "../testbenches/usb_host.sv"
+
 `timescale 1ns/1ps
 
 `define PERIOD_48MHz    20.8333ns
@@ -32,9 +41,13 @@ end
 usb_fe_if usb_fe();
 
 usb dut (
-    .clk_48m    (tb_clk),
-    .rst        (~tb_rst_n),
-    .fe_ctrl    (usb_fe.ctrl)
+    .clk_48m (tb_clk),
+    .rst     (~tb_rst_n),
+    .fe_ctrl (usb_fe.ctrl)
+);
+
+usb_host host (
+    .phy (usb_fe.phy)
 );
 
 // To be continued in tb.sv file ...

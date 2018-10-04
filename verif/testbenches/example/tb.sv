@@ -1,4 +1,4 @@
-`include "../testbenches/tb_header.sv"
+`include "../testbenches/tb_header.svh"
 
 `define STOP_TIME  50ms   // Time when test stops
 `define TEST_DESCR "Example test that do nothing"
@@ -26,4 +26,4 @@ begin : tb_body
     #100ns tb_busy = 0;
 end
 
-`include "../testbenches/tb_footer.sv"
+`include "../testbenches/tb_footer.svh"

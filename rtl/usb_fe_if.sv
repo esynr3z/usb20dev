@@ -23,7 +23,7 @@ modport ctrl (
     output pu
 );
 
-// Analog frontend imitation (only for testbench)
+// Analog frontend imitation
 wire  dn;        // USB D- line
 wire  dp;        // USB D+ line
 
