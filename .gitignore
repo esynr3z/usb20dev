@@ -5,3 +5,5 @@
 *.log
 *.history
 *.key
+*.diag
+*.svcf
