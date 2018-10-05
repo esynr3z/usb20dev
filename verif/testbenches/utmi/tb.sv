@@ -7,7 +7,7 @@
 
 `include "../testbenches/tb_header.svh"
 
-`define STOP_TIME  50ms   // Time when test stops
+`define STOP_TIME  100ms   // Time when test stops
 `define TEST_DESCR "UTMI test"
 
 //-----------------------------------------------------------------------------
@@ -16,21 +16,26 @@
 
 initial
 begin : tb_body
+    bit [7:0][7:0] temp_raw_packet;
+
     //Reset
     wait(tb_rst_n);
     
     //Test start
     #100ns tb_busy = 1;
     #18ns;
-    tb.host.send_j_bit();
-    tb.host.send_k_bit();
-    tb.host.send_j_bit();
-    tb.host.send_k_bit();
-    tb.host.send_se0_bit();
-    tb.host.send_j_bit();
-    tb.host.send_k_bit();
-    tb.host.send_j_bit();
-    tb.host.send_k_bit();
+
+    temp_raw_packet[0] = 8'h33;
+    temp_raw_packet[1] = 8'h55;
+    temp_raw_packet[2] = 8'hEE;
+    temp_raw_packet[3] = 8'hFF;
+    temp_raw_packet[4] = 8'h00;
+    temp_raw_packet[5] = 8'h50;
+    temp_raw_packet[6] = 8'hFF;
+    temp_raw_packet[7] = 8'hAA;
+
+    tb.host.send_raw_sync();
+    tb.host.send_raw_packet(temp_raw_packet, 8*8);
 
     tb_err = 0; // no errors
 
