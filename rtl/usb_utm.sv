@@ -20,8 +20,13 @@ module usb_utm (
     usb_utmi_if.utm utmi        // UTMI
 );
 
+localparam LINE_STATE_HIST_LEN = 8;
+localparam STUFF_BITS_N = 6;
+
+int i;
+
 //-----------------------------------------------------------------------------
-// Data recovery
+// Line state recovery
 //-----------------------------------------------------------------------------
 // Double-flop synchronization for input data lines
 logic [3:0]       dpair_dd;
@@ -72,18 +77,20 @@ end
 
 assign line_state_valid = (line_phase_cnt == 'b1) ? 1'b1 : 1'b0;
 
-struct packed {
-    utmi_line_state_t prev;
-    utmi_line_state_t curr;
-} line_state_hist;
+
+// Push line states to the history buffer for NRZI decoding, and SYNC, EOP detection
+utmi_line_state_t line_state_hist [LINE_STATE_HIST_LEN-1:0];
 
 always_ff @(posedge clk or posedge rst)
 begin
-    if (rst)
-        line_state_hist <= {UTMI_LS_DJ, UTMI_LS_DJ};
-    else if (line_state_valid) begin
-        line_state_hist.prev <= line_state_hist.curr;
-        line_state_hist.curr <= utmi.line_state;
+    for (i = 0; i < LINE_STATE_HIST_LEN; i++) begin
+        if (rst)
+            line_state_hist[i] <= UTMI_LS_DJ;
+        else if (line_state_valid && (i == 0)) begin
+            line_state_hist[i] <= utmi.line_state;
+        end else if (line_state_valid) begin
+            line_state_hist[i] <= line_state_hist[i-1];
+        end
     end
 end
 
@@ -95,22 +102,22 @@ logic dec_nrzi_valid;
 
 always_comb
 begin
-    if ((line_state_hist.prev == UTMI_LS_DJ) &&
-        (line_state_hist.curr == UTMI_LS_DJ)) begin
+    if ((line_state_hist[1] == UTMI_LS_DJ) &&
+        (line_state_hist[0] == UTMI_LS_DJ)) begin
         dec_nrzi_bit   = 1'b1;
-        dec_nrzi_valid = 1'b1;
-    end else if ((line_state_hist.prev == UTMI_LS_DJ) &&
-                 (line_state_hist.curr == UTMI_LS_DK)) begin
+        dec_nrzi_valid = line_state_valid;
+    end else if ((line_state_hist[1] == UTMI_LS_DJ) &&
+                 (line_state_hist[0] == UTMI_LS_DK)) begin
         dec_nrzi_bit   = 1'b0;
-        dec_nrzi_valid = 1'b1;
-    end else if ((line_state_hist.prev == UTMI_LS_DK) &&
-                 (line_state_hist.curr == UTMI_LS_DJ) )begin
+        dec_nrzi_valid = line_state_valid;
+    end else if ((line_state_hist[1] == UTMI_LS_DK) &&
+                 (line_state_hist[0] == UTMI_LS_DJ) )begin
         dec_nrzi_bit   = 1'b0;
-        dec_nrzi_valid = 1'b1;
-    end else if ((line_state_hist.prev == UTMI_LS_DK) &&
-                 (line_state_hist.curr == UTMI_LS_DK)) begin
+        dec_nrzi_valid = line_state_valid;
+    end else if ((line_state_hist[1] == UTMI_LS_DK) &&
+                 (line_state_hist[0] == UTMI_LS_DK)) begin
         dec_nrzi_bit   = 1'b1;
-        dec_nrzi_valid = 1'b1;
+        dec_nrzi_valid = line_state_valid;
     end else begin
         dec_nrzi_bit = 1'b0;
         dec_nrzi_valid = 1'b0;
@@ -120,20 +127,26 @@ end
 //-----------------------------------------------------------------------------
 // Bit unstuffer
 //-----------------------------------------------------------------------------
-logic [5:0] unstuff_bit_shift;
+logic [STUFF_BITS_N-1:0] unstuff_shifter;
+logic unstuff_event;
+logic unstuff_error;
 logic dbit;
 logic dbit_valid;
 
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst)
-        unstuff_bit_shift <= '0;
+        unstuff_shifter <= '0;
     else if (dec_nrzi_valid)
-        unstuff_bit_shift <= {unstuff_bit_shift[4:0], dec_nrzi_bit};
+        unstuff_shifter <= {unstuff_shifter[STUFF_BITS_N-2:0], dec_nrzi_bit};
 end
 
+assign unstuff_event = (unstuff_shifter == '1);
+assign unstuff_error = unstuff_event && (dec_nrzi_bit != 1'b0);
+
+// Data input serial bitstream
 assign dbit = dec_nrzi_bit;
-assign dbit_valid = (dec_nrzi_valid && (unstuff_bit_shift == 6'b111111)) ? 1'b0 : 1'b1;
+assign dbit_valid = dec_nrzi_valid && (!unstuff_event);
 
 //-----------------------------------------------------------------------------
 // Temp output control
