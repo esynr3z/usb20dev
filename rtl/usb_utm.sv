@@ -44,7 +44,7 @@ always_ff @(posedge clk or posedge rst)
 begin
     if (rst)
         line_trans <= 1'b0;
-    else if (utmi.line_state != dpair)
+    else if ((utmi.line_state != dpair) && !line_trans)
         line_trans <= 1'b1;
     else
         line_trans <= 1'b0;
