@@ -131,10 +131,10 @@ endtask : wait_interpacket_delay
 
 task send_raw_eop;
 begin
-  send_raw_se0();
-  send_raw_se0();
-  send_raw_j();
-  wait_interpacket_delay();
+    send_raw_se0();
+    send_raw_se0();
+    send_raw_j();
+    wait_interpacket_delay();
 end
 endtask : send_raw_eop
 
