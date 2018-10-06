@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# run_xsim: Script to create Vivado project and run simulation
+
+# Default parameters
+TESTBENCH=""
+BATCHMODE="DISABLE"
+EXIT_ON_STOP="DISABLE"
+
+# Functions
+function clear_work {
+    rm -rf xsim.dir *.wdb *.log *.pb *.jou *.xpr *.prj *.sim *.ip_user_files *.hw *.cache
+}
+
+# Parse options
+while getopts ":h:t:n:d:cbre" Option
+do
+  case $Option in
+    e) EXIT_ON_STOP="ENABLE";;
+    t) TESTBENCH=$OPTARG;;
+    b) BATCHMODE="ENABLE";;
+    r)  echo "Clear all temp data in work directory..."
+        clear_work
+        echo "Done!"
+        exit 0
+        ;;
+    h | *)  echo "Usage: just type: \"bash run_xsim\", and script will run with these parameters:"
+            echo "  TESTBENCH = ${TESTBENCH}"
+            echo "  BATCHMODE = ${BATCHMODE}"
+            echo "  EXIT_ON_STOP = ${EXIT_ON_STOP}"
+            echo ""
+            echo "To run yours own testbench just type: \"bash run_xsim -t xxx\", where xxx - folder of your testbench in \"testbenches/xxx\""
+            echo ""
+            echo "Also you can run script with these arguments:"
+            echo ""
+            echo "  -e        :enable exit on \$stop. For example:"
+            echo "              bash run_xsim -t example -e"
+            echo ""
+            echo "  -b        :run vivado in batch mode. For example:"
+            echo "              bash run_xsim -t example -b"
+            echo ""
+            echo "  -r        :clear all temp data. For example:"
+            echo "              bash run_xsim -r"
+            exit 0
+            ;;
+  esac
+done
+if [ $OPTIND -eq 1 ]
+then
+    echo "Type \"bash run_xsim -h\" to see how to use this script"
+    exit 0
+fi
+shift $(($OPTIND - 1))
+
+# Create parameters for launch
+PARAMS="../testbenches/${TESTBENCH}/tb.sv"
+
+if [[ ${BATCHMODE} == "ENABLE" ]]
+then
+    PARAMS="${PARAMS} batch_mode"
+else
+    PARAMS="${PARAMS} gui_mode"
+fi
+
+if [ ${EXIT_ON_STOP} == "ENABLE" ]
+then
+    PARAMS="${PARAMS} exit_on_stop"
+else
+    PARAMS="${PARAMS} no_exit"
+fi
+vivado -mode tcl -source run.tcl -tclargs `echo "${PARAMS}"` | tee run_xsim.log
+
+exit 0

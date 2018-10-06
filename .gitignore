@@ -7,3 +7,11 @@
 *.key
 *.diag
 *.svcf
+*.pb
+*.jou
+*.xpr
+*.prj
+*.sim
+*.ip_user_files
+*.hw
+*.cache
