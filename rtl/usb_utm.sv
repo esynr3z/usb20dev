@@ -20,8 +20,13 @@ module usb_utm (
     usb_utmi_if.utm utmi        // UTMI
 );
 
-localparam LINE_STATE_HIST_LEN = 8;
-localparam STUFF_BITS_N = 6;
+localparam        LINE_STATE_HIST_LEN = 3;
+localparam        STUFF_BITS_N        = 6;
+localparam bus8_t SYNC_PATTERN        = 'h80;
+
+localparam utmi_line_state_t [LINE_STATE_HIST_LEN-1:0] EOP_PATTERN = {
+    UTMI_LS_SE0, UTMI_LS_SE0, UTMI_LS_DJ
+};
 
 int i;
 
@@ -29,27 +34,32 @@ int i;
 // Line state recovery
 //-----------------------------------------------------------------------------
 // Double-flop synchronization for input data lines
-logic [3:0]       dpair_dd;
-utmi_line_state_t dpair;
+logic [3:0]       line_pair_dd;
+utmi_line_state_t line_pair;
+logic             line_trans;
+utmi_line_state_t line_state;
+logic             line_idle;
+logic             detect_eop;
 
 always_ff @(posedge clk)
 begin
-    dpair_dd <= {dpair_dd[1:0], fe_ctrl.dn_rx, fe_ctrl.dp_rx};
+    if (rst)
+        line_pair_dd <= '0;
+    else
+        line_pair_dd <= {line_pair_dd[1:0], fe_ctrl.dn_rx, fe_ctrl.dp_rx};
 end
 
-assign dpair = utmi_line_state_t'(dpair_dd[3:2]);
+assign line_pair = utmi_line_state_t'(line_pair_dd[3:2]);
 
 // We dont use true diff pair, so we have to handle data transition moments
 // and change line state one clock after transition.
 // It is supposed, that transition period is shorter than sample clock period.
-logic line_trans;
-utmi_line_state_t line_state;
 
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst)
         line_trans <= 1'b0;
-    else if ((utmi.line_state != dpair) && !line_trans)
+    else if ((utmi.line_state != line_pair) && !line_trans)
         line_trans <= 1'b1;
     else
         line_trans <= 1'b0;
@@ -60,12 +70,12 @@ begin
     if (rst)
         utmi.line_state <= UTMI_LS_DJ;
     else if (line_trans)
-        utmi.line_state <= dpair;
+        utmi.line_state <= line_pair;
 end
 
 // Generate valid signal in the middle of each bit
 logic [1:0] line_phase_cnt;
-logic line_state_valid;
+logic       line_state_valid;
 
 always_ff @(posedge clk or posedge rst) 
 begin
@@ -77,9 +87,8 @@ end
 
 assign line_state_valid = (line_phase_cnt == 'b1) ? 1'b1 : 1'b0;
 
-
-// Push line states to the history buffer for NRZI decoding, and SYNC, EOP detection
-utmi_line_state_t line_state_hist [LINE_STATE_HIST_LEN-1:0];
+// Push line states to the history buffer for NRZI decoding and EOP detection
+utmi_line_state_t [LINE_STATE_HIST_LEN-1:0] line_state_hist;
 
 always_ff @(posedge clk or posedge rst)
 begin
@@ -93,6 +102,8 @@ begin
         end
     end
 end
+
+assign detect_eop  = (line_state_hist == EOP_PATTERN);
 
 //-----------------------------------------------------------------------------
 // NRZI decoder
@@ -119,7 +130,7 @@ begin
         dec_nrzi_bit   = 1'b1;
         dec_nrzi_valid = line_state_valid;
     end else begin
-        dec_nrzi_bit = 1'b0;
+        dec_nrzi_bit   = 1'b0;
         dec_nrzi_valid = 1'b0;
     end
 end
@@ -127,26 +138,213 @@ end
 //-----------------------------------------------------------------------------
 // Bit unstuffer
 //-----------------------------------------------------------------------------
-logic [STUFF_BITS_N-1:0] unstuff_shifter;
-logic unstuff_event;
-logic unstuff_error;
-logic dbit;
-logic dbit_valid;
+logic [STUFF_BITS_N-1:0] unstuff_shift;
+logic                    unstuff_event;
+logic                    unstuff_error;
 
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst)
-        unstuff_shifter <= '0;
+        unstuff_shift <= '0;
     else if (dec_nrzi_valid)
-        unstuff_shifter <= {unstuff_shifter[STUFF_BITS_N-2:0], dec_nrzi_bit};
+        unstuff_shift <= {unstuff_shift[STUFF_BITS_N-2:0], dec_nrzi_bit};
 end
 
-assign unstuff_event = (unstuff_shifter == '1);
+assign unstuff_event = (unstuff_shift == '1);
 assign unstuff_error = unstuff_event && (dec_nrzi_bit != 1'b0);
 
-// Data input serial bitstream
-assign dbit = dec_nrzi_bit;
-assign dbit_valid = dec_nrzi_valid && (!unstuff_event);
+//-----------------------------------------------------------------------------
+// Data bitstream control
+//-----------------------------------------------------------------------------
+logic  data_bit;
+logic  data_bit_valid;
+bus8_t data_shift;
+logic  detect_sync;
+
+assign data_bit = dec_nrzi_bit;
+assign data_bit_valid = dec_nrzi_valid && (!unstuff_event || line_idle);
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst || detect_eop)
+        data_shift <= '1;
+    else if (data_bit_valid)
+        data_shift <= {data_bit, data_shift[7:1]};
+end
+
+// SYNC and Idle detection
+assign detect_sync = (data_shift == SYNC_PATTERN);
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst)
+        line_idle <= 1'b1;
+    else if (detect_sync && line_idle)
+        line_idle <= 1'b0;
+    else if (detect_eop)
+        line_idle <= 1'b1;
+end
+
+//-----------------------------------------------------------------------------
+// Receive state machine
+//-----------------------------------------------------------------------------
+enum logic [2:0] {
+    RX_WAIT_S,
+    STRIP_SYNC_S,
+    RX_DATA_S,
+    STRIP_EOP_S,
+    ERROR_S,
+    ABORT_S,
+    TERMINATE_S,
+    XXX_S = 'x
+} fsm_state, fsm_next;
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst)
+        fsm_state <= RX_WAIT_S;
+    else
+        fsm_state <= fsm_next;
+end
+
+always_comb
+begin
+    fsm_next = XXX_S;
+    case (fsm_state)
+        RX_WAIT_S : begin
+            if (detect_sync)
+                fsm_next = STRIP_SYNC_S;
+            else
+                fsm_next = RX_WAIT_S;
+        end
+
+        STRIP_SYNC_S : begin
+            fsm_next = RX_DATA_S;
+        end
+
+        RX_DATA_S : begin
+            if (unstuff_error)
+                fsm_next = ERROR_S;
+            else if (detect_eop)
+                fsm_next = STRIP_EOP_S;
+            else
+                fsm_next = RX_DATA_S;
+        end
+
+        STRIP_EOP_S : begin
+            fsm_next = RX_WAIT_S;
+        end
+
+        ERROR_S : begin
+            fsm_next = ABORT_S;
+        end
+
+        ABORT_S : begin
+            if (line_idle)
+                fsm_next = TERMINATE_S;
+            else
+                fsm_next = ABORT_S;
+        end
+
+        TERMINATE_S : begin
+            fsm_next = RX_WAIT_S;
+        end
+    endcase
+end
+
+logic  [3:0] data_bit_cnt;
+bus8_t       data_hold;
+logic        data_valid;
+logic        data_active;
+logic        data_error;
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst) begin
+        data_bit_cnt <= '0;
+        data_hold    <= '0;
+        data_valid   <= 1'b0;
+        data_active  <= 1'b0;
+        data_error   <= 1'b0;
+    end else begin
+        case (fsm_state)
+            RX_WAIT_S : begin
+                data_bit_cnt <= '0;
+            end
+
+            STRIP_SYNC_S : begin
+                data_active <= 1'b1;
+            end
+
+            RX_DATA_S : begin
+                // count shifted data bits
+                if (data_bit_valid) begin
+                    if (data_bit_cnt == 'd8)
+                        data_bit_cnt <= 'd1;
+                    else
+                        data_bit_cnt <= data_bit_cnt + 1;
+                end
+                // hold data when byte accumulated
+                if (data_bit_cnt == 'd8) begin
+                    data_hold <= data_shift;
+                    data_valid <= 1'b1;
+                end else
+                    data_valid <= 1'b0;
+            end
+
+            STRIP_EOP_S : begin
+                data_valid  = 'b0;
+                data_active = 'b0;
+            end
+
+            ERROR_S : begin
+                data_error  = 1'b1;
+            end
+
+            ABORT_S : begin
+                data_valid  = 1'b0;
+                data_error  = 1'b0;
+            end
+
+            TERMINATE_S : begin
+                data_active = 1'b0;
+            end
+        endcase
+    end
+end
+
+// Data valid should be a pulse for FS
+logic data_valid_ff;
+logic data_valid_pulse;
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst) begin
+        data_valid_ff <= 1'b0;
+    end else begin
+        data_valid_ff <= data_valid;
+    end
+end
+
+assign data_valid_pulse = data_valid && (!data_valid_ff);
+
+//-----------------------------------------------------------------------------
+// Outputs registering stage
+//-----------------------------------------------------------------------------
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst) begin
+        utmi.data_out  <= '0;
+        utmi.rx_valid  <= 1'b0;
+        utmi.rx_active <= 1'b0;
+        utmi.rx_error  <= 1'b0;
+    end else begin
+        utmi.data_out  <= data_hold;
+        utmi.rx_valid  <= data_valid_pulse;
+        utmi.rx_active <= data_active;
+        utmi.rx_error  <= data_error;
+    end
+end
 
 //-----------------------------------------------------------------------------
 // Temp output control
