@@ -4,3 +4,5 @@
 ../../rtl/usb_fe_if.sv
 ../../rtl/usb.sv
 ../../rtl/usb_utm.sv
+../../rtl/usb_utm_rx.sv
+../../rtl/usb_utm_tx.sv
