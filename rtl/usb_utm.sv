@@ -27,7 +27,6 @@ usb_utm_rx rx (
     .clk        (clk),              //  i: Clock
     .rst        (rst),              //  i: Asynchronous reset
     .suspend_m  (utmi.suspend_m),   //  i: Places the Macrocell in a suspend mode
-    .op_mode    (utmi.op_mode),     //  i: Operational modes control
     .line_state (utmi.line_state),  //  o: Signal to reflect the current state of the recievers
     .data_out   (utmi.data_out),    //  o: USB data output bus
     .rx_valid   (utmi.rx_valid),    //  o: data_out bus has valid data

@@ -17,7 +17,6 @@ module usb_utm_rx (
 
     // UTMI rx
     input  logic             suspend_m,     // Places the Macrocell in a suspend mode
-    input  utmi_op_mode_t    op_mode,       // Operational modes control
     output utmi_line_state_t line_state,    // Signal to reflect the current state of the recievers
     output bus8_t            data_out,      // USB data output bus
     output logic             rx_valid,      // data_out bus has valid data
