@@ -15,6 +15,10 @@ module usb_utm_rx (
     input  logic             clk,           // Clock
     input  logic             rst,           // Asynchronous reset
 
+    // Frontend rx
+    input  logic             dn_rx,         // USB Data- input
+    input  logic             dp_rx,         // USB Data+ input
+
     // UTMI rx
     input  logic             suspend_m,     // Places the Macrocell in a suspend mode
     output utmi_line_state_t line_state,    // Signal to reflect the current state of the recievers
@@ -44,7 +48,7 @@ begin
     if (rst)
         line_pair_ff <= '0;
     else
-        line_pair_ff <= {line_pair_ff[1:0], fe_ctrl.dn_rx, fe_ctrl.dp_rx};
+        line_pair_ff <= {line_pair_ff[1:0], dn_rx, dp_rx};
 end
 
 assign line_pair = utmi_line_state_t'(line_pair_ff[3:2]);

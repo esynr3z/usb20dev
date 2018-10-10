@@ -26,6 +26,10 @@ module usb_utm (
 usb_utm_rx rx (
     .clk        (clk),              //  i: Clock
     .rst        (rst),              //  i: Asynchronous reset
+
+    .dn_rx      (fe_ctrl.dn_rx),    //  i: USB Data- input
+    .dp_rx      (fe_ctrl.dp_rx),    //  i: USB Data+ input
+
     .suspend_m  (utmi.suspend_m),   //  i: Places the Macrocell in a suspend mode
     .line_state (utmi.line_state),  //  o: Signal to reflect the current state of the recievers
     .data_out   (utmi.data_out),    //  o: USB data output bus
@@ -40,6 +44,11 @@ usb_utm_rx rx (
 usb_utm_tx tx (
     .clk        (clk),              //  i: Clock
     .rst        (rst),              //  i: Asynchronous reset
+
+    .dp_tx      (fe_ctrl.dp_tx),    //  o: USB Data+ output
+    .dn_tx      (fe_ctrl.dn_tx),    //  o: USB Data- output
+    .tx_oen     (fe_ctrl.tx_oen),   //  o: USB Data output enable
+
     .suspend_m  (utmi.suspend_m),   //  i: Places the Macrocell in a suspend mode
     .op_mode    (utmi.op_mode),     //  i: Operational modes control
     .data_in    (utmi.data_in),     //  i: USB data input bus
@@ -47,12 +56,7 @@ usb_utm_tx tx (
     .tx_ready   (utmi.tx_ready)     //  o: UTM ready to load transmit data into holding registers
 );
 
-//-----------------------------------------------------------------------------
-// Temp output control
-//-----------------------------------------------------------------------------
-assign fe_ctrl.dp_tx  = 1'b0;
-assign fe_ctrl.dn_tx  = 1'b0;
-assign fe_ctrl.tx_oen = 1'b0;
-assign fe_ctrl.pu     = 1'b1;
+// FIXME: fix pullup control
+assign fe_ctrl.pu = 1'b1;
 
 endmodule : usb_utm
