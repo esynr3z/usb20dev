@@ -25,12 +25,7 @@ module usb_utm_rx (
     output logic             rx_error       // Receive error detection
 );
 
-localparam        LINE_STATE_HIST_LEN = 3;
-localparam bus8_t SYNC_PATTERN        = 'h80;
-
-localparam utmi_line_state_t [LINE_STATE_HIST_LEN-1:0] EOP_PATTERN = {
-    UTMI_LS_SE0, UTMI_LS_SE0, UTMI_LS_DJ
-};
+localparam LINE_STATE_HIST_LEN = 3;
 
 int i;
 
@@ -38,8 +33,9 @@ int i;
 // Line state recovery
 //-----------------------------------------------------------------------------
 // Double-flop synchronization for input data lines
-logic [3:0]       line_pair_dd;
+logic [3:0]       line_pair_ff;
 utmi_line_state_t line_pair;
+utmi_line_state_t line_state_curr;
 logic             line_trans;
 logic             line_idle;
 logic             detect_eop;
@@ -47,12 +43,12 @@ logic             detect_eop;
 always_ff @(posedge clk)
 begin
     if (rst)
-        line_pair_dd <= '0;
+        line_pair_ff <= '0;
     else
-        line_pair_dd <= {line_pair_dd[1:0], fe_ctrl.dn_rx, fe_ctrl.dp_rx};
+        line_pair_ff <= {line_pair_ff[1:0], fe_ctrl.dn_rx, fe_ctrl.dp_rx};
 end
 
-assign line_pair = utmi_line_state_t'(line_pair_dd[3:2]);
+assign line_pair = utmi_line_state_t'(line_pair_ff[3:2]);
 
 // We dont use true diff pair, so we have to handle data transition moments
 // and change line state one clock after transition.
@@ -62,7 +58,7 @@ always_ff @(posedge clk or posedge rst)
 begin
     if (rst)
         line_trans <= 1'b0;
-    else if ((line_state != line_pair) && !line_trans)
+    else if ((line_state_curr != line_pair) && !line_trans)
         line_trans <= 1'b1;
     else
         line_trans <= 1'b0;
@@ -71,9 +67,9 @@ end
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst)
-        line_state <= UTMI_LS_DJ;
+        line_state_curr <= UTMI_LS_DJ;
     else if (line_trans)
-        line_state <= line_pair;
+        line_state_curr <= line_pair;
 end
 
 // Generate valid signal in the middle of each bit
@@ -99,14 +95,14 @@ begin
         if (rst)
             line_state_hist[i] <= UTMI_LS_DJ;
         else if (line_state_valid && (i == 0)) begin
-            line_state_hist[i] <= line_state;
+            line_state_hist[i] <= line_state_curr;
         end else if (line_state_valid) begin
             line_state_hist[i] <= line_state_hist[i-1];
         end
     end
 end
 
-assign detect_eop  = (line_state_hist == EOP_PATTERN);
+assign detect_eop  = (line_state_hist == USB_EOP_PATTERN);
 
 //-----------------------------------------------------------------------------
 // NRZI decoder
@@ -125,7 +121,7 @@ begin
         dec_nrzi_bit   = 1'b0;
         dec_nrzi_valid = line_state_valid;
     end else if ((line_state_hist[1] == UTMI_LS_DK) &&
-                 (line_state_hist[0] == UTMI_LS_DJ) )begin
+                 (line_state_hist[0] == UTMI_LS_DJ)) begin
         dec_nrzi_bit   = 1'b0;
         dec_nrzi_valid = line_state_valid;
     end else if ((line_state_hist[1] == UTMI_LS_DK) &&
@@ -141,16 +137,16 @@ end
 //-----------------------------------------------------------------------------
 // Bit unstuffer
 //-----------------------------------------------------------------------------
-logic [STUFF_BITS_N-1:0] unstuff_shift;
-logic                    unstuff_event;
-logic                    unstuff_error;
+logic [USB_STUFF_BITS_N-1:0] unstuff_shift;
+logic                        unstuff_event;
+logic                        unstuff_error;
 
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst)
         unstuff_shift <= '0;
     else if (dec_nrzi_valid)
-        unstuff_shift <= {unstuff_shift[STUFF_BITS_N-2:0], dec_nrzi_bit};
+        unstuff_shift <= {unstuff_shift[USB_STUFF_BITS_N-2:0], dec_nrzi_bit};
 end
 
 assign unstuff_event = (unstuff_shift == '1);
@@ -176,7 +172,7 @@ begin
 end
 
 // SYNC and Idle detection
-assign detect_sync = (data_shift == SYNC_PATTERN);
+assign detect_sync = (data_shift == USB_SYNC_PATTERN);
 
 always_ff @(posedge clk or posedge rst)
 begin
@@ -337,15 +333,17 @@ assign data_valid_pulse = data_valid && (!data_valid_ff);
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst) begin
-        data_out  <= '0;
-        rx_valid  <= 1'b0;
-        rx_active <= 1'b0;
-        rx_error  <= 1'b0;
+        data_out   <= '0;
+        line_state <= UTMI_LS_DJ;
+        rx_valid   <= 1'b0;
+        rx_active  <= 1'b0;
+        rx_error   <= 1'b0;
     end else begin
-        data_out  <= data_hold;
-        rx_valid  <= data_valid_pulse;
-        rx_active <= data_active;
-        rx_error  <= data_error;
+        line_state <= line_state_curr;
+        data_out   <= data_hold;
+        rx_valid   <= data_valid_pulse;
+        rx_active  <= data_active;
+        rx_error   <= data_error;
     end
 end
 

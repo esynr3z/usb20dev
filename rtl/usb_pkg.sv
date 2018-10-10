@@ -7,8 +7,6 @@
 
 package usb_pkg;
 
-parameter STUFF_BITS_N = 6;
-
 typedef logic [7:0]  bus8_t;
 typedef logic [31:0] bus32_t;
 

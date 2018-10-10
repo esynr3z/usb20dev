@@ -24,30 +24,29 @@ module usb_utm (
 // UTM receive side
 //-----------------------------------------------------------------------------
 usb_utm_rx rx (
-    .clk        (clk),
-    .rst        (rst),
-    .suspend_m  (utmi.suspend_m),
-    .op_mode    (utmi.op_mode),
-    .line_state (utmi.line_state),
-    .data_out   (utmi.data_out),
-    .rx_valid   (utmi.rx_valid),
-    .rx_active  (utmi.rx_active),
-    .rx_error   (utmi.rx_error)
+    .clk        (clk),              //  i: Clock
+    .rst        (rst),              //  i: Asynchronous reset
+    .suspend_m  (utmi.suspend_m),   //  i: Places the Macrocell in a suspend mode
+    .op_mode    (utmi.op_mode),     //  i: Operational modes control
+    .line_state (utmi.line_state),  //  o: Signal to reflect the current state of the recievers
+    .data_out   (utmi.data_out),    //  o: USB data output bus
+    .rx_valid   (utmi.rx_valid),    //  o: data_out bus has valid data
+    .rx_active  (utmi.rx_active),   //  o: Receive state machine is active
+    .rx_error   (utmi.rx_error)     //  o: Receive error detection
 );
 
 //-----------------------------------------------------------------------------
 // UTM transmit side
 //-----------------------------------------------------------------------------
 usb_utm_tx tx (
-    .clk        (clk),
-    .rst        (rst),
-    .suspend_m  (utmi.suspend_m),
-    .op_mode    (utmi.op_mode),
-    .data_in    (utmi.data_in),
-    .tx_valid   (utmi.tx_valid),
-    .tx_ready   (utmi.tx_ready)
+    .clk        (clk),              //  i: Clock
+    .rst        (rst),              //  i: Asynchronous reset
+    .suspend_m  (utmi.suspend_m),   //  i: Places the Macrocell in a suspend mode
+    .op_mode    (utmi.op_mode),     //  i: Operational modes control
+    .data_in    (utmi.data_in),     //  i: USB data input bus
+    .tx_valid   (utmi.tx_valid),    //  i: Transmit data on data_in bus is valid
+    .tx_ready   (utmi.tx_ready)     //  o: UTM ready to load transmit data into holding registers
 );
-
 
 //-----------------------------------------------------------------------------
 // Temp output control
