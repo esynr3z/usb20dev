@@ -14,25 +14,44 @@ module usb_sie_beh (
 );
 
 //-----------------------------------------------------------------------------
-// Connections
+// Connections and init
 //-----------------------------------------------------------------------------
-/*logic dp_tx, dn_tx;
-wire  dp_rx, dn_rx;
+// system bus
+logic             suspend_m;    // Places the Macrocell in a suspend mode
+utmi_op_mode_t    op_mode;      // Operational modes control
+bus8_t            data_in;
+logic             tx_valid;
 
-assign phy.dp = dp_tx;
-assign phy.dn = dn_tx;
-assign dn_rx = phy.dp;
-assign dn_rx = phy.dn;
 
 initial
 begin
-    send_raw_j();
+    utmi.suspend_m = '0;
+    utmi.op_mode   = '0;
+    utmi.data_in   = '0;
+    utmi.tx_valid  = '0;
 end
-*/
+
 //-----------------------------------------------------------------------------
 // UTMI line control tasks
 //-----------------------------------------------------------------------------
-
+task send_data(
+    input bit [2047:0][7:0] data,
+    input int len
+);
+int i;
+begin
+    @(posedge clk);
+    for (i = 0; i < len; i += 1) begin
+        utmi.data_in  = data[i];
+        utmi.tx_valid = 1'b1;
+        @(posedge clk);
+        while(!utmi.tx_ready)
+            @(posedge clk);
+    end
+    @(posedge clk);
+    utmi.tx_valid = 1'b0;
+end
+endtask : send_data
 
 
 endmodule : usb_sie_beh

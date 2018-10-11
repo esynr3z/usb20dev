@@ -2,7 +2,7 @@
 // UTM transmit side:
 //   - NRZI encoder
 //   - bit stuffer
-//   - data to line states transform
+//   - data to line states convert
 //   - transmit FSM
 //
 //------------------------------------------------------------------------------
@@ -32,7 +32,6 @@ module usb_utm_tx (
 // Transmit state machine
 //-----------------------------------------------------------------------------
 logic data_hold_full;
-logic done_eop;
 logic send_eop;
 
 enum logic [2:0] {
@@ -68,12 +67,10 @@ begin
         end
 
         TX_DATA_LOAD_S : begin
-            if (!tx_valid)
-                fsm_next = SEND_EOP_S;
-            else if (data_hold_full)
-                fsm_next = TX_DATA_WAIT_S;
+            if ((!tx_valid) && send_eop)
+                fsm_next = TX_WAIT_S;
             else
-                fsm_next = TX_DATA_LOAD_S;
+                fsm_next = TX_DATA_WAIT_S;
         end
 
         TX_DATA_WAIT_S : begin
@@ -84,25 +81,26 @@ begin
         end
 
         SEND_EOP_S : begin
-            if (done_eop)
-                fsm_next = TX_WAIT_S;
-            else
-                fsm_next = SEND_EOP_S;
+            fsm_next = TX_DATA_WAIT_S;
         end
     endcase
 end
 
-logic        data_bit;
+logic        data_last;
 logic  [3:0] data_bit_cnt;
 bus8_t       data_hold;
 bus8_t       data_shift;
-logic        data_shift_en;
+logic        data_bit_strobe;
+logic        data_oen;
 
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst) begin
         data_bit_cnt   <= '0;
         data_hold      <= '0;
+        data_shift     <= '0;
+        data_oen       <= 1'b0;
+        data_last      <= 1'b0;
         data_hold_full <= 1'b0;
         tx_ready       <= 1'b0;
         send_eop       <= 1'b0;
@@ -119,40 +117,71 @@ begin
 
             TX_DATA_LOAD_S : begin
                 if (tx_valid) begin
-                    data_hold <= data_in;
+                    data_hold      <= data_in;
                     data_hold_full <= 1'b1;
-                    tx_ready <= 1'b1;
+                    tx_ready       <= 1'b1;
+                    data_oen       <= 1'b1;
+                end else begin
+                    tx_ready       <= 1'b0;
+                    data_hold      <= '0;
+                    data_hold_full <= 1'b1;
+                    data_last      <= 1'b1;
                 end
-                else
-                    send_eop <= 1'b1;
             end
 
             TX_DATA_WAIT_S : begin
                 tx_ready <= 1'b0;
 
-                if  (data_shift_en) begin
+                if (data_bit_strobe) begin
                     data_shift <= data_shift >> 1;
-
-                    if (data_bit_cnt == 'd8)
-                        data_bit_cnt <= 'd0;
-                    else
-                        data_bit_cnt <= data_bit_cnt + 1;
+                    data_bit_cnt <= data_bit_cnt + 1;
+                end else if (data_bit_cnt == 'd8) begin
+                    data_shift   <= data_hold;
+                    data_bit_cnt <= 'd0;
                 end
 
                 if (data_bit_cnt == 'd8) begin
-                    data_shift <= data_hold;
+                    if (data_last) begin
+                        data_hold_full <= 1'b1;
+                        send_eop       <= 1'b1;
+                        data_last      <= 1'b0;
+                    end else
+                       data_hold_full <= 1'b0;
+                end else if ((data_bit_cnt == 'd3) && send_eop) begin
+                    send_eop       <= 1'b0;
+                    data_oen       <= 1'b0;
                     data_hold_full <= 1'b0;
                 end
-            end
-
-            SEND_EOP_S : begin
-                tx_ready <= 1'b0;
             end
         endcase
     end
 end
 
-assign data_bit = data_shift[0];
+logic       data_bit;
+logic [1:0] data_bit_phase_cnt;
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst || (!data_oen))
+        data_bit_phase_cnt <= '1;
+    else
+        data_bit_phase_cnt <= data_bit_phase_cnt + 'b1;
+end
+
+assign data_bit_strobe = (data_bit_phase_cnt == '1);
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst || (!data_oen))
+        data_bit <= 1'b1;
+    else if (data_bit_strobe)
+        data_bit <= data_shift[0];
+end
+
+//-----------------------------------------------------------------------------
+// Data to line states converter
+//-----------------------------------------------------------------------------
+
 
 //-----------------------------------------------------------------------------
 // Outputs registering stage

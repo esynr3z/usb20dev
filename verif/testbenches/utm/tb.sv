@@ -34,7 +34,7 @@ begin : tb_body
     temp_raw_packet[5] = 8'h50;
     temp_raw_packet[6] = 8'hFF;
     temp_raw_packet[7] = 8'hAA;
-
+/*
     tb.host_beh.send_raw_sync();
     tb.host_beh.send_raw_packet(temp_raw_packet, 8*8);
     tb.host_beh.send_raw_eop();
@@ -51,11 +51,14 @@ begin : tb_body
     tb.host_beh.send_raw_sync();
     tb.host_beh.send_raw_packet(temp_raw_packet, 8*8);
     tb.host_beh.send_raw_eop();
+*/
+    
+    tb.sie_beh.send_data(temp_raw_packet, 8);
 
     tb_err = 0; // no errors
 
     //Test end
-    #1us tb_busy = 0;
+    #3us tb_busy = 0;
 end
 
 `include "../testbenches/tb_footer.svh"

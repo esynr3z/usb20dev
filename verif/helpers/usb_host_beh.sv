@@ -87,8 +87,8 @@ end
 endtask : send_raw_sync
 
 task send_raw_packet(
-    input bit [(1023+3)*8-1:0] bitdata,
-    input int bitlen
+    input bit [2048*8-1:0] data,
+    input int len
 );
 int i;
 bit enc_nrzi_bit;
@@ -97,14 +97,14 @@ begin
     enc_nrzi_bit = 0;
     stuff_bit_cnt = 0;
 
-    for (i = 0; i < bitlen; i += 1) begin
+    for (i = 0; i < len; i += 1) begin
         // NRZI encoding
-        if (!bitdata[i])
+        if (!data[i])
             enc_nrzi_bit = !enc_nrzi_bit;
         send_raw_bit(enc_nrzi_bit, !enc_nrzi_bit);
 
         // Bit stuffing
-        if (bitdata[i])
+        if (data[i])
             stuff_bit_cnt += 1;
         else
             stuff_bit_cnt = 0;
