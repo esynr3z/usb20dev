@@ -1,14 +1,15 @@
 //==============================================================================
-// Testbench body
+// Testbench body for UTM test
 //
 //------------------------------------------------------------------------------
 // [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
 //==============================================================================
 
 `include "../testbenches/tb_header.svh"
+`include "../testbenches/tb_dut_utm.svh"
 
 `define STOP_TIME  100ms   // Time when test stops
-`define TEST_DESCR "UTMI test"
+`define TEST_DESCR "UTM test - receive, transmit and special cases"
 
 //-----------------------------------------------------------------------------
 // Testbench body
@@ -34,9 +35,9 @@ begin : tb_body
     temp_raw_packet[6] = 8'hFF;
     temp_raw_packet[7] = 8'hAA;
 
-    tb.host.send_raw_sync();
-    tb.host.send_raw_packet(temp_raw_packet, 8*8);
-    tb.host.send_raw_eop();
+    tb.host_beh.send_raw_sync();
+    tb.host_beh.send_raw_packet(temp_raw_packet, 8*8);
+    tb.host_beh.send_raw_eop();
 
     temp_raw_packet[0] = 8'h22;
     temp_raw_packet[1] = 8'h68;
@@ -47,9 +48,9 @@ begin : tb_body
     temp_raw_packet[6] = 8'hFF;
     temp_raw_packet[7] = 8'h00;
 
-    tb.host.send_raw_sync();
-    tb.host.send_raw_packet(temp_raw_packet, 8*8);
-    tb.host.send_raw_eop();
+    tb.host_beh.send_raw_sync();
+    tb.host_beh.send_raw_packet(temp_raw_packet, 8*8);
+    tb.host_beh.send_raw_eop();
 
     tb_err = 0; // no errors
 

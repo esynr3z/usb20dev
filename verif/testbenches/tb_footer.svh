@@ -1,5 +1,5 @@
 //==============================================================================
-// Testbench footer with some tesbench control
+// Testbench footer with some common tesbench control
 //
 //------------------------------------------------------------------------------
 // [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>

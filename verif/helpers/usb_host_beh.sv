@@ -1,5 +1,5 @@
 //==============================================================================
-// USB 2.0 FS Host side emulation
+// USB 2.0 FS Host behavioral model
 //
 //------------------------------------------------------------------------------
 // [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
@@ -11,7 +11,7 @@
 `define USB_PERIOD_DEL  ((`USB_PERIOD + ($urandom_range(0, `USB_JIT*2) - `USB_JIT))/1000.0)
 `define USB_PHASE_DEL   ($urandom_range(0,`USB_JIT*2)/1000.0)
 
-module usb_host (
+module usb_host_beh (
     // USB lines
     usb_fe_if.phy phy
 );

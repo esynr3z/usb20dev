@@ -9,6 +9,10 @@
 			"name": "Testbenches",
 			"path": "./testbenches"
 		},
+		{
+			"name": "Helpers",
+			"path": "./helpers"
+		},
 	],
 	"settings":
 	{

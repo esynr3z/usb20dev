@@ -1,11 +1,13 @@
 //==============================================================================
-// Testbench header with instances and common signal declarations
+// Testbench header with common code
 //
 //------------------------------------------------------------------------------
 // [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
 //==============================================================================
 
-`include "../testbenches/usb_host.sv"
+// Include all helper tools
+`include "../helpers/usb_host_beh.sv"
+`include "../helpers/usb_sie_beh.sv"
 
 `timescale 1ns/1ps
 
@@ -34,20 +36,5 @@ initial
 begin
     #(`RST_DELAY_TIME) tb_rst_n <= 1;
 end
-
-//-----------------------------------------------------------------------------
-// DUT top
-//-----------------------------------------------------------------------------
-usb_fe_if usb_fe();
-
-usb dut (
-    .clk_48m (tb_clk),
-    .rst     (~tb_rst_n),
-    .fe_ctrl (usb_fe.ctrl)
-);
-
-usb_host host (
-    .phy (usb_fe.phy)
-);
 
 // To be continued in tb.sv file ...

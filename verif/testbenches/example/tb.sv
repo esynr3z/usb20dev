@@ -1,7 +1,15 @@
+//==============================================================================
+// Testbench body
+//
+//------------------------------------------------------------------------------
+// [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
+//==============================================================================
+
 `include "../testbenches/tb_header.svh"
+`include "../testbenches/tb_dut_usb.svh"
 
 `define STOP_TIME  50ms   // Time when test stops
-`define TEST_DESCR "Example test that do nothing"
+`define TEST_DESCR "Example test of USB that do nothing"
 
 //-----------------------------------------------------------------------------
 // Testbench body
