@@ -141,20 +141,28 @@ begin
                 // data output enable should be active till last se0 of eop have been transmitted
                 if (data_bit_strobe)
                     data_oen <= (send_eop && (data_bit_cnt == 'd2)) ? 1'b0 : 1'b1;
-        
+
                 // signalling that last bit of last byte transmitted and next is se0 of eop
                 if ((data_bit_cnt == 'd8) && data_shift_last) begin
                     send_eop <= 1'b1;
                 end else if (data_bit_strobe && send_eop && (data_bit_cnt == 'd2)) begin
                     send_eop <= 1'b0;
-                end 
+                end
             end
         endcase
     end
 end
 
-logic       data_bit;
-logic [1:0] data_bit_phase_cnt;
+
+//-----------------------------------------------------------------------------
+// Bit stuffer
+//-----------------------------------------------------------------------------
+logic                        data_bit;
+logic [1:0]                  data_bit_phase_cnt;
+logic                        data_bit_valid;
+logic [USB_STUFF_BITS_N-1:0] stuff_shift;
+logic                        stuff_event;
+logic                        stuff_bit;
 
 always_ff @(posedge clk or posedge rst)
 begin
@@ -164,7 +172,7 @@ begin
         data_bit_phase_cnt <= data_bit_phase_cnt + 'b1;
 end
 
-assign data_bit_strobe = (data_bit_phase_cnt == '1);
+assign data_bit_valid = (data_bit_phase_cnt == '1);
 
 always_ff @(posedge clk or posedge rst)
 begin
@@ -172,6 +180,25 @@ begin
         data_bit <= 1'b0;
     else if (data_bit_strobe)
         data_bit <= data_shift[0];
+end
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst)
+        stuff_shift <= '0;
+    else if (data_bit_valid)
+        stuff_shift <= {stuff_shift[USB_STUFF_BITS_N-2:0], stuff_event? 1'b0 : data_bit};
+end
+
+assign stuff_event     = (stuff_shift == '1);
+assign data_bit_strobe = data_bit_valid && (!stuff_event);
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst)
+        stuff_bit <= 1'b0;
+    else if (data_bit_valid)
+        stuff_bit <= stuff_event? 1'b0 : data_bit;
 end
 
 //-----------------------------------------------------------------------------
