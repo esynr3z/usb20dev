@@ -32,6 +32,7 @@ module usb_utm_tx (
 // Transmit state machine
 //-----------------------------------------------------------------------------
 logic data_hold_full;
+logic data_oen;
 logic send_eop;
 
 enum logic [2:0] {
@@ -39,7 +40,6 @@ enum logic [2:0] {
     SEND_SYNC_S,
     TX_DATA_LOAD_S,
     TX_DATA_WAIT_S,
-    SEND_EOP_S,
     XXX_S = 'x
 } fsm_state, fsm_next;
 
@@ -67,7 +67,7 @@ begin
         end
 
         TX_DATA_LOAD_S : begin
-            if ((!tx_valid) && send_eop)
+            if ((!tx_valid) && (!data_oen))
                 fsm_next = TX_WAIT_S;
             else
                 fsm_next = TX_DATA_WAIT_S;
@@ -79,36 +79,31 @@ begin
             else
                 fsm_next = TX_DATA_WAIT_S;
         end
-
-        SEND_EOP_S : begin
-            fsm_next = TX_DATA_WAIT_S;
-        end
     endcase
 end
 
-logic        data_last;
+logic        data_shift_last;
 logic  [3:0] data_bit_cnt;
 bus8_t       data_hold;
 bus8_t       data_shift;
 logic        data_bit_strobe;
-logic        data_oen;
 
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst) begin
-        data_bit_cnt   <= '0;
-        data_hold      <= '0;
-        data_shift     <= '0;
-        data_oen       <= 1'b0;
-        data_last      <= 1'b0;
-        data_hold_full <= 1'b0;
-        tx_ready       <= 1'b0;
-        send_eop       <= 1'b0;
+        data_bit_cnt    <= '0;
+        data_hold       <= '0;
+        data_shift      <= '0;
+        data_oen        <= 1'b0;
+        data_shift_last <= 1'b0;
+        data_hold_full  <= 1'b0;
+        tx_ready        <= 1'b0;
+        send_eop        <= 1'b0;
     end else begin
         case (fsm_state)
             TX_WAIT_S : begin
-                data_bit_cnt <= 'd0;
-                send_eop     <= 1'b0;
+                data_bit_cnt    <= 'd0;
+                data_shift_last <= 1'b0;
             end
 
             SEND_SYNC_S : begin
@@ -120,38 +115,39 @@ begin
                     data_hold      <= data_in;
                     data_hold_full <= 1'b1;
                     tx_ready       <= 1'b1;
-                    data_oen       <= 1'b1;
-                end else begin
-                    tx_ready       <= 1'b0;
-                    data_hold      <= '0;
-                    data_hold_full <= 1'b1;
-                    data_last      <= 1'b1;
+                end else if (!tx_valid && data_oen) begin
+                    data_hold       <= 'd3;
+                    data_hold_full  <= 1'b1;
+                    tx_ready        <= 1'b0;
+                    data_shift_last <= 1'b1;
                 end
             end
 
             TX_DATA_WAIT_S : begin
                 tx_ready <= 1'b0;
 
+                // data shifting on every strobe
                 if (data_bit_strobe) begin
-                    data_shift <= data_shift >> 1;
+                    data_shift   <= data_shift >> 1;
                     data_bit_cnt <= data_bit_cnt + 1;
+                    if (send_eop && (data_bit_cnt == 'd2))
+                        data_hold_full <= 1'b0;
                 end else if (data_bit_cnt == 'd8) begin
-                    data_shift   <= data_hold;
-                    data_bit_cnt <= 'd0;
-                end
-
-                if (data_bit_cnt == 'd8) begin
-                    if (data_last) begin
-                        data_hold_full <= 1'b1;
-                        send_eop       <= 1'b1;
-                        data_last      <= 1'b0;
-                    end else
-                       data_hold_full <= 1'b0;
-                end else if ((data_bit_cnt == 'd3) && send_eop) begin
-                    send_eop       <= 1'b0;
-                    data_oen       <= 1'b0;
+                    data_shift     <= data_hold;
+                    data_bit_cnt   <= 'd0;
                     data_hold_full <= 1'b0;
                 end
+
+                // data output enable should be active till last se0 of eop have been transmitted
+                if (data_bit_strobe)
+                    data_oen <= (send_eop && (data_bit_cnt == 'd2)) ? 1'b0 : 1'b1;
+        
+                // signalling that last bit of last byte transmitted and next is se0 of eop
+                if ((data_bit_cnt == 'd8) && data_shift_last) begin
+                    send_eop <= 1'b1;
+                end else if (data_bit_strobe && send_eop && (data_bit_cnt == 'd2)) begin
+                    send_eop <= 1'b0;
+                end 
             end
         endcase
     end
@@ -173,7 +169,7 @@ assign data_bit_strobe = (data_bit_phase_cnt == '1);
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst || (!data_oen))
-        data_bit <= 1'b1;
+        data_bit <= 1'b0;
     else if (data_bit_strobe)
         data_bit <= data_shift[0];
 end
