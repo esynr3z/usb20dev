@@ -235,12 +235,24 @@ begin
     end
 end
 
+
+// Output enable expander - to drive J one bit time after EOP transmitted
+logic [3:0] data_oen_ff;
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst)
+        data_oen_ff <= '0;
+    else
+        data_oen_ff <= {data_oen_ff[2:0], data_oen};
+end
+
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst)
         tx_oen <= 1'b0;
     else
-        tx_oen <= data_oen;
+        tx_oen <= |data_oen_ff;
 end
 
 endmodule : usb_utm_tx
