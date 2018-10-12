@@ -22,6 +22,9 @@ module usb_host_beh (
 logic dp_tx, dn_tx;
 wire  dp_rx, dn_rx;
 
+pullup  (phy.dp);
+pulldown(phy.dn);
+
 assign phy.dp = dp_tx;
 assign phy.dn = dn_tx;
 assign dn_rx = phy.dp;
@@ -29,15 +32,15 @@ assign dn_rx = phy.dn;
 
 initial
 begin
-    send_raw_j();
+    send_raw_nondrive();
 end
 
 //-----------------------------------------------------------------------------
 // Raw line control tasks
 //-----------------------------------------------------------------------------
 task send_raw_bit(
-    input bit dp,
-    input bit dn
+    input logic dp,
+    input logic dn
 );
 bit jit_sel;
 begin
@@ -54,6 +57,12 @@ begin
     #`USB_PERIOD_DEL;
 end
 endtask : send_raw_bit
+
+task send_raw_nondrive;
+begin
+    send_raw_bit(1'bz, 1'bz);
+end
+endtask : send_raw_nondrive
 
 task send_raw_k;
 begin

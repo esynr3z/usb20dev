@@ -163,6 +163,7 @@ logic                        data_bit_valid;
 logic [USB_STUFF_BITS_N-1:0] stuff_shift;
 logic                        stuff_event;
 logic                        stuff_bit;
+logic                        stuff_bit_valid;
 
 always_ff @(posedge clk or posedge rst)
 begin
@@ -195,31 +196,51 @@ assign data_bit_strobe = data_bit_valid && (!stuff_event);
 
 always_ff @(posedge clk or posedge rst)
 begin
-    if (rst)
-        stuff_bit <= 1'b0;
-    else if (data_bit_valid)
-        stuff_bit <= stuff_event? 1'b0 : data_bit;
+    if (rst || (!data_oen)) begin
+        stuff_bit       <= 1'b0;
+        stuff_bit_valid <= 1'b0;
+    end else begin
+        stuff_bit       <= stuff_event? 1'b0 : data_bit;
+        stuff_bit_valid <= data_bit_valid;
+    end
+end
+
+//-----------------------------------------------------------------------------
+// NRZI encoder
+//-----------------------------------------------------------------------------
+logic enc_nrzi_bit;
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst || (!data_oen)) begin
+        enc_nrzi_bit <= 1'b1;
+    end else if (stuff_bit_valid && (stuff_bit == 1'b0))
+        enc_nrzi_bit = ~enc_nrzi_bit;
 end
 
 //-----------------------------------------------------------------------------
 // Data to line states converter
 //-----------------------------------------------------------------------------
-
-
-//-----------------------------------------------------------------------------
-// Outputs registering stage
-//-----------------------------------------------------------------------------
 always_ff @(posedge clk or posedge rst)
 begin
-    if (rst) begin
+    if (rst || (!data_oen)) begin
+        dp_tx    <= 1'b1;
+        dn_tx    <= 1'b0;
+    end else if (stuff_bit_valid && send_eop) begin
         dp_tx    <= 1'b0;
         dn_tx    <= 1'b0;
-        tx_oen   <= 1'b0;
-    end else begin
-        dp_tx    <= 1'b0;
-        dn_tx    <= 1'b0;
-        tx_oen   <= 1'b0;        
+    end else if (stuff_bit_valid) begin
+        dp_tx    <= enc_nrzi_bit;
+        dn_tx    <= !enc_nrzi_bit;
     end
+end
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst)
+        tx_oen <= 1'b0;
+    else
+        tx_oen <= data_oen;
 end
 
 endmodule : usb_utm_tx
