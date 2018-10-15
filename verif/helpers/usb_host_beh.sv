@@ -147,4 +147,4 @@ begin
 end
 endtask : send_raw_eop
 
-endmodule : usb_host
+endmodule : usb_host_beh

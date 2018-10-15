@@ -5,6 +5,7 @@
 // [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
 //==============================================================================
 
+import usb_utmi_pkg::*;
 
 module usb_sie_beh (
     input  logic    clk,        // Clock
@@ -22,11 +23,10 @@ utmi_op_mode_t    op_mode;      // Operational modes control
 bus8_t            data_in;
 logic             tx_valid;
 
-
 initial
 begin
     utmi.suspend_m = '0;
-    utmi.op_mode   = '0;
+    utmi.op_mode   = UTMI_OM_NORMAL;
     utmi.data_in   = '0;
     utmi.tx_valid  = '0;
 end

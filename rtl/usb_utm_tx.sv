@@ -142,7 +142,7 @@ begin
                 if (data_bit_strobe)
                     data_oen <= (send_eop && (data_bit_cnt == 'd2)) ? 1'b0 : 1'b1;
 
-                // signalling that last bit of last byte transmitted and next is se0 of eop
+                // signalling that last bit of last byte transmitted and next will be se0 of eop
                 if ((data_bit_cnt == 'd8) && data_shift_last) begin
                     send_eop <= 1'b1;
                 end else if (data_bit_strobe && send_eop && (data_bit_cnt == 'd2)) begin
@@ -153,17 +153,9 @@ begin
     end
 end
 
-
-//-----------------------------------------------------------------------------
-// Bit stuffer
-//-----------------------------------------------------------------------------
-logic                        data_bit;
-logic [1:0]                  data_bit_phase_cnt;
-logic                        data_bit_valid;
-logic [USB_STUFF_BITS_N-1:0] stuff_shift;
-logic                        stuff_event;
-logic                        stuff_bit;
-logic                        stuff_bit_valid;
+logic       data_bit;
+logic [1:0] data_bit_phase_cnt;
+logic       data_bit_valid;
 
 always_ff @(posedge clk or posedge rst)
 begin
@@ -182,6 +174,14 @@ begin
     else if (data_bit_strobe)
         data_bit <= data_shift[0];
 end
+
+//-----------------------------------------------------------------------------
+// Bit stuffer
+//-----------------------------------------------------------------------------
+logic [USB_STUFF_BITS_N-1:0] stuff_shift;
+logic                        stuff_event;
+logic                        stuff_bit;
+logic                        stuff_bit_valid;
 
 always_ff @(posedge clk or posedge rst)
 begin
@@ -223,18 +223,13 @@ end
 //-----------------------------------------------------------------------------
 always_ff @(posedge clk or posedge rst)
 begin
-    if (rst || (!data_oen)) begin
-        dp_tx    <= 1'b1;
-        dn_tx    <= 1'b0;
-    end else if (stuff_bit_valid && send_eop) begin
-        dp_tx    <= 1'b0;
-        dn_tx    <= 1'b0;
-    end else if (stuff_bit_valid) begin
-        dp_tx    <= enc_nrzi_bit;
-        dn_tx    <= !enc_nrzi_bit;
-    end
+    if (rst || (!data_oen))
+        {dn_tx, dp_tx} <= UTMI_LS_DJ;
+    else if (stuff_bit_valid && send_eop)
+        {dn_tx, dp_tx} <= UTMI_LS_SE0;
+    else if (stuff_bit_valid)
+        {dn_tx, dp_tx} <= {!enc_nrzi_bit, enc_nrzi_bit};
 end
-
 
 // Output enable expander - to drive J one bit time after EOP transmitted
 logic [3:0] data_oen_ff;
