@@ -175,7 +175,7 @@ begin
 end
 
 // SYNC and Idle detection
-assign detect_sync = (data_shift == USB_SYNC_PATTERN);
+assign detect_sync = (data_shift == USB_SYNC_VAL);
 
 always_ff @(posedge clk or posedge rst)
 begin

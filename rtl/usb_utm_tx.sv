@@ -87,6 +87,7 @@ logic  [3:0] data_bit_cnt;
 bus8_t       data_hold;
 bus8_t       data_shift;
 logic        data_bit_strobe;
+logic        stuff_event;
 
 always_ff @(posedge clk or posedge rst)
 begin
@@ -107,7 +108,7 @@ begin
             end
 
             SEND_SYNC_S : begin
-                data_shift <= USB_SYNC_PATTERN;
+                data_shift <= USB_SYNC_VAL;
             end
 
             TX_DATA_LOAD_S : begin
@@ -116,7 +117,7 @@ begin
                     data_hold_full <= 1'b1;
                     tx_ready       <= 1'b1;
                 end else if (!tx_valid && data_oen) begin
-                    data_hold       <= 'd3;
+                    data_hold       <= 'd0;
                     data_hold_full  <= 1'b1;
                     tx_ready        <= 1'b0;
                     data_shift_last <= 1'b1;
@@ -130,22 +131,23 @@ begin
                 if (data_bit_strobe) begin
                     data_shift   <= data_shift >> 1;
                     data_bit_cnt <= data_bit_cnt + 1;
-                    if (send_eop && (data_bit_cnt == 'd2))
+                    if (send_eop && (data_bit_cnt == 'd11))
                         data_hold_full <= 1'b0;
                 end else if (data_bit_cnt == 'd8) begin
                     data_shift     <= data_hold;
-                    data_bit_cnt   <= 'd0;
                     data_hold_full <= 1'b0;
+                    if (!data_shift_last)
+                        data_bit_cnt   <= 'd0;
                 end
 
                 // data output enable should be active till last se0 of eop have been transmitted
                 if (data_bit_strobe)
-                    data_oen <= (send_eop && (data_bit_cnt == 'd2)) ? 1'b0 : 1'b1;
+                    data_oen <= (send_eop && (data_bit_cnt == 'd11)) ? 1'b0 : 1'b1;
 
                 // signalling that last bit of last byte transmitted and next will be se0 of eop
-                if ((data_bit_cnt == 'd8) && data_shift_last) begin
+                if ((data_bit_cnt == 'd9) && data_shift_last && (!stuff_event)) begin
                     send_eop <= 1'b1;
-                end else if (data_bit_strobe && send_eop && (data_bit_cnt == 'd2)) begin
+                end else if (data_bit_strobe && send_eop && (data_bit_cnt == 'd11)) begin
                     send_eop <= 1'b0;
                 end
             end
@@ -179,7 +181,6 @@ end
 // Bit stuffer
 //-----------------------------------------------------------------------------
 logic [USB_STUFF_BITS_N-1:0] stuff_shift;
-logic                        stuff_event;
 logic                        stuff_bit;
 logic                        stuff_bit_valid;
 

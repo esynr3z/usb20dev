@@ -33,8 +33,12 @@ typedef enum logic [1:0] {
 // Parameters
 //-----------------------------------------------------------------------------
 parameter        USB_STUFF_BITS_N = 6;
-parameter bus8_t USB_SYNC_PATTERN = 'h80;
+parameter bus8_t USB_SYNC_VAL     = 'h80;
 
+parameter utmi_line_state_t [7:0] USB_SYNC_PATTERN = {
+    UTMI_LS_DK, UTMI_LS_DJ, UTMI_LS_DK, UTMI_LS_DJ,
+    UTMI_LS_DK, UTMI_LS_DJ, UTMI_LS_DK, UTMI_LS_DK
+};
 parameter utmi_line_state_t [2:0] USB_EOP_PATTERN = {
     UTMI_LS_SE0, UTMI_LS_SE0, UTMI_LS_DJ
 };
