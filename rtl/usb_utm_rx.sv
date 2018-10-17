@@ -351,7 +351,7 @@ end
 
 // UTMI specification:
 //"LineState represents bus activity within 2 or 3 CLK times of the actual events on the bus"
-// But because we don't use true diff receivers, this time is 3-4 CLK cycles (look line_trans signal).
+// But we don't use true diff receivers, so this time is 3-4 CLK cycles (look line_trans signal).
 assign line_state = line_state_curr;
 
 endmodule : usb_utm_rx

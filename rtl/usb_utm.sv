@@ -20,6 +20,8 @@ module usb_utm (
     usb_utmi_if.utm utmi        // UTMI
 );
 
+// TODO: add logic for handling suspend_m and op_mode signals
+
 //-----------------------------------------------------------------------------
 // UTM receive side
 //-----------------------------------------------------------------------------
