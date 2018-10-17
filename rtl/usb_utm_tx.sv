@@ -131,7 +131,7 @@ begin
                 if (data_bit_strobe) begin
                     data_shift   <= data_shift >> 1;
                     data_bit_cnt <= data_bit_cnt + 1;
-                    if (send_eop && (data_bit_cnt == 'd11))
+                    if (send_eop && (data_bit_cnt == 'd12))
                         data_hold_full <= 1'b0;
                 end else if (data_bit_cnt == 'd8) begin
                     data_shift     <= data_hold;
@@ -142,12 +142,12 @@ begin
 
                 // data output enable should be active till last se0 of eop have been transmitted
                 if (data_bit_strobe)
-                    data_oen <= (send_eop && (data_bit_cnt == 'd11)) ? 1'b0 : 1'b1;
+                    data_oen <= (send_eop && (data_bit_cnt == 'd12)) ? 1'b0 : 1'b1;
 
                 // signalling that last bit of last byte transmitted and next will be se0 of eop
-                if ((data_bit_cnt == 'd9) && data_shift_last && (!stuff_event)) begin
+                if ((data_bit_cnt == 'd10) && data_shift_last && (!stuff_event)) begin
                     send_eop <= 1'b1;
-                end else if (data_bit_strobe && send_eop && (data_bit_cnt == 'd11)) begin
+                end else if (data_bit_strobe && send_eop && (data_bit_cnt == 'd12)) begin
                     send_eop <= 1'b0;
                 end
             end
@@ -216,7 +216,7 @@ begin
     if (rst || (!data_oen)) begin
         enc_nrzi_bit <= 1'b1;
     end else if (stuff_bit_valid && (stuff_bit == 1'b0))
-        enc_nrzi_bit = ~enc_nrzi_bit;
+        enc_nrzi_bit <= ~enc_nrzi_bit;
 end
 
 //-----------------------------------------------------------------------------
