@@ -33,7 +33,7 @@ module usb_utm_tx (
 //-----------------------------------------------------------------------------
 logic data_hold_full;
 logic data_oen;
-logic send_eop;
+logic data_se0;
 
 enum logic [2:0] {
     TX_WAIT_S,
@@ -99,7 +99,7 @@ begin
         data_shift_last <= 1'b0;
         data_hold_full  <= 1'b0;
         tx_ready        <= 1'b0;
-        send_eop        <= 1'b0;
+        data_se0        <= 1'b0;
     end else begin
         case (fsm_state)
             TX_WAIT_S : begin
@@ -131,7 +131,7 @@ begin
                 if (data_bit_strobe) begin
                     data_shift   <= data_shift >> 1;
                     data_bit_cnt <= data_bit_cnt + 1;
-                    if (send_eop && (data_bit_cnt == 'd12))
+                    if (data_se0 && (data_bit_cnt == 'd12))
                         data_hold_full <= 1'b0;
                 end else if (data_bit_cnt == 'd8) begin
                     data_shift     <= data_hold;
@@ -142,13 +142,13 @@ begin
 
                 // data output enable should be active till last se0 of eop have been transmitted
                 if (data_bit_strobe)
-                    data_oen <= (send_eop && (data_bit_cnt == 'd12)) ? 1'b0 : 1'b1;
+                    data_oen <= (data_se0 && (data_bit_cnt == 'd12)) ? 1'b0 : 1'b1;
 
                 // signalling that last bit of last byte transmitted and next will be se0 of eop
                 if ((data_bit_cnt == 'd10) && data_shift_last && (!stuff_event)) begin
-                    send_eop <= 1'b1;
-                end else if (data_bit_strobe && send_eop && (data_bit_cnt == 'd12)) begin
-                    send_eop <= 1'b0;
+                    data_se0 <= 1'b1;
+                end else if (data_bit_strobe && data_se0 && (data_bit_cnt == 'd12)) begin
+                    data_se0 <= 1'b0;
                 end
             end
         endcase
@@ -177,6 +177,8 @@ begin
         data_bit <= data_shift[0];
 end
 
+assign data_bit_strobe = data_bit_valid && (!stuff_event);
+
 //-----------------------------------------------------------------------------
 // Bit stuffer
 //-----------------------------------------------------------------------------
@@ -193,7 +195,6 @@ begin
 end
 
 assign stuff_event     = (stuff_shift == '1);
-assign data_bit_strobe = data_bit_valid && (!stuff_event);
 
 always_ff @(posedge clk or posedge rst)
 begin
@@ -226,7 +227,7 @@ always_ff @(posedge clk or posedge rst)
 begin
     if (rst || (!data_oen))
         {dn_tx, dp_tx} <= UTMI_LS_DJ;
-    else if (stuff_bit_valid && send_eop)
+    else if (stuff_bit_valid && data_se0)
         {dn_tx, dp_tx} <= UTMI_LS_SE0;
     else if (stuff_bit_valid)
         {dn_tx, dp_tx} <= {!enc_nrzi_bit, enc_nrzi_bit};
