@@ -20,6 +20,7 @@ module usb_utm_rx (
     input  logic             dp_rx,         // USB Data+ input
 
     // UTMI rx
+    input  logic             tx_active,     // Transmit state machine is active
     input  logic             suspend_m,     // Places the Macrocell in a suspend mode
     output utmi_line_state_t line_state,    // Signal to reflect the current state of the recievers
     output bus8_t            data_out,      // USB data output bus
@@ -46,7 +47,7 @@ logic             detect_eop;
 always_ff @(posedge clk)
 begin
     if (rst)
-        line_pair_ff <= '0;
+        line_pair_ff <= 4'b0101;
     else
         line_pair_ff <= {line_pair_ff[1:0], dn_rx, dp_rx};
 end
@@ -164,7 +165,7 @@ bus8_t data_shift;
 logic  detect_sync;
 
 assign data_bit = dec_nrzi_bit;
-assign data_bit_valid = dec_nrzi_valid && (!unstuff_event || line_idle);
+assign data_bit_valid = dec_nrzi_valid && (!unstuff_event || line_idle) && (!tx_active);
 
 always_ff @(posedge clk or posedge rst)
 begin
@@ -214,7 +215,7 @@ begin
     fsm_next = XXX_S;
     case (fsm_state)
         RX_WAIT_S : begin
-            if (detect_sync)
+            if (detect_sync && (!tx_active))
                 fsm_next = STRIP_SYNC_S;
             else
                 fsm_next = RX_WAIT_S;

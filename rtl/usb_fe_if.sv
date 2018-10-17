@@ -29,8 +29,8 @@ wire  dp;        // USB D+ line
 
 assign dp = tx_oen ? dp_tx : 1'bz;
 assign dn = tx_oen ? dn_tx : 1'bz;
-assign dp_rx = tx_oen ? 1'b1 : dp;
-assign dn_rx = tx_oen ? 1'b0 : dn;
+assign dp_rx = dp;
+assign dn_rx = dn;
 
 modport phy (
     output pu,

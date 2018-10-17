@@ -30,6 +30,7 @@ usb_utm_rx rx (
     .dn_rx      (fe_ctrl.dn_rx),    //  i: USB Data- input
     .dp_rx      (fe_ctrl.dp_rx),    //  i: USB Data+ input
 
+    .tx_active  (fe_ctrl.tx_oen),   //  i: Transmit state machine is active
     .suspend_m  (utmi.suspend_m),   //  i: Places the Macrocell in a suspend mode
     .line_state (utmi.line_state),  //  o: Signal to reflect the current state of the recievers
     .data_out   (utmi.data_out),    //  o: USB data output bus

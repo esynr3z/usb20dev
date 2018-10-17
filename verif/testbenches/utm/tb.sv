@@ -10,7 +10,7 @@
 
 //`define STOP_TIME  100ms   // Time when test stops
 `define TEST_DESCR "UTM test - receive, transmit and special cases"
-`define RND_CYCLES 10000
+`define RND_CYCLES 1000
 
 //-----------------------------------------------------------------------------
 // Testbench body
