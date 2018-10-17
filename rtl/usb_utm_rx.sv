@@ -338,17 +338,20 @@ always_ff @(posedge clk or posedge rst)
 begin
     if (rst) begin
         data_out   <= '0;
-        line_state <= UTMI_LS_DJ;
         rx_valid   <= 1'b0;
         rx_active  <= 1'b0;
         rx_error   <= 1'b0;
     end else begin
-        line_state <= line_state_curr;
         data_out   <= data_hold;
         rx_valid   <= data_valid_pulse;
         rx_active  <= data_active;
         rx_error   <= data_error;
     end
 end
+
+// UTMI specification:
+//"LineState represents bus activity within 2 or 3 CLK times of the actual events on the bus"
+// But because we don't use true diff receivers, this time is 3-4 CLK cycles (look line_trans signal).
+assign line_state = line_state_curr;
 
 endmodule : usb_utm_rx
