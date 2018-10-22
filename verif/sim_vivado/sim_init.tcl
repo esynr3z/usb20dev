@@ -9,7 +9,7 @@ if {[catch { open_project usb20dev }]} {
 
 # get sources from external file and selected test tb.sv from args
 read_verilog -library work -sv [split [read [open "../src.files" "r"]]] [lindex $argv 0]
-set_property include_dirs "../testbenches" [current_fileset]
+set_property include_dirs [list "../testbenches" "../helpers"] [current_fileset]
 update_compile_order -fileset sim_1
 
 # prepare for simulation
