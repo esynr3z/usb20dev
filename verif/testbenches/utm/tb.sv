@@ -75,17 +75,17 @@ begin : tb_body
 
     //Reset
     wait(tb_rst_n);
-    
+
     //Test start
     #100ns tb_busy = 1;
 
-    $display("%0d, I: %m: SIE --> UTM --> Host", $time);
+    $display("%0d, I: %m: PE --> UTM --> Host", $time);
     for (int i = 0; i < `RND_CYCLES; i++) begin : crv_tx
         ptester.randomize();
         $display("%0d, I: %m: Cycle %0d, %0d bytes to transmit", $time, i, ptester.tx_len);
 
         fork
-            tb.sie_beh.send_data(ptester.tx_data, ptester.tx_len);
+            tb.pe_beh.send_data(ptester.tx_data, ptester.tx_len);
             tb.host_beh.receive_raw_packet(ptester.rx_data, ptester.rx_len);
         join
 
@@ -95,14 +95,14 @@ begin : tb_body
             tb_err++;
     end : crv_tx
 
-    $display("%0d, I: %m: SIE <-- UTM <-- Host", $time);
+    $display("%0d, I: %m: PE <-- UTM <-- Host", $time);
     for (int i = 0; i < `RND_CYCLES; i++) begin : crv_rx
         ptester.randomize();
         $display("%0d, I: %m: Cycle %0d, %0d bytes to receive", $time, i, ptester.tx_len);
 
         fork
             tb.host_beh.send_raw_packet(ptester.tx_data, ptester.tx_len);
-            tb.sie_beh.receive_data(ptester.rx_data, ptester.rx_len);
+            tb.pe_beh.receive_data(ptester.rx_data, ptester.rx_len);
         join
 
         if (!ptester.is_len_eq())

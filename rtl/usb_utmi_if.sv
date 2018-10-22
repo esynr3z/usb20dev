@@ -41,8 +41,8 @@ modport utm (
     output rx_error
 );
 
-// Serial Interface Engine side
-modport sie (
+// Protocol Engine side
+modport pe (
     // system bus
     output suspend_m,
     output op_mode,

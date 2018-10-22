@@ -17,7 +17,7 @@ module usb_host_beh (
 //-----------------------------------------------------------------------------
 // USB FS 12.000 Mb/s +-0.25% (+-208ps)
 localparam USB_PERIOD = 83333;   // ps
-localparam USB_JIT    = 100;     // ps   
+localparam USB_JIT    = 100;     // ps
 `define USB_PERIOD_DEL  ((USB_PERIOD + ($urandom_range(0, USB_JIT*2) - USB_JIT))/1000.0)
 `define USB_PHASE_DEL   ($urandom_range(0, USB_JIT*2)/1000.0)
 
@@ -72,7 +72,7 @@ begin
         dn_tx <= dn;
         #`USB_PHASE_DEL dp_tx <= dp;
     end
-    
+
     #`USB_PERIOD_DEL;
 end
 endtask : send_raw_bit
@@ -91,13 +91,13 @@ endtask : send_raw_k
 
 task send_raw_j;
 begin
-      send_raw_bit(1, 0); 
+      send_raw_bit(1, 0);
 end
 endtask : send_raw_j
 
 task send_raw_se0;
 begin
-      send_raw_bit(0, 0); 
+      send_raw_bit(0, 0);
 end
 endtask : send_raw_se0
 

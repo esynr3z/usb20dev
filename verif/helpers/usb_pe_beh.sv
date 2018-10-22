@@ -1,5 +1,5 @@
 //==============================================================================
-// USB 2.0 FS Serial Interface Engine behavioral model
+// USB 2.0 FS Protocol Engine behavioral model
 //
 //------------------------------------------------------------------------------
 // [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
@@ -7,11 +7,11 @@
 
 import usb_utmi_pkg::*;
 
-module usb_sie_beh (
+module usb_pe_beh (
     input  logic    clk,        // Clock
     input  logic    rst,        // Asynchronous reset
-    
-    usb_utmi_if.sie utmi        // UTMI
+
+    usb_utmi_if.pe utmi         // UTMI
 );
 
 //-----------------------------------------------------------------------------
@@ -64,7 +64,7 @@ task receive_data(
 begin
     data = 0;
     len = 0;
-    wait(utmi.rx_active);    
+    wait(utmi.rx_active);
     while(utmi.rx_active) begin
         @(posedge clk);
         if (utmi.rx_active && utmi.rx_valid) begin
@@ -78,4 +78,4 @@ end
 endtask : receive_data
 
 
-endmodule : usb_sie_beh
+endmodule : usb_pe_beh

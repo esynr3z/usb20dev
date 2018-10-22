@@ -15,9 +15,9 @@ usb_host_beh host_beh (
     .phy (usb_fe.phy)
 );
 
-usb_sie_beh sie_beh (
+usb_pe_beh pe_beh (
     .clk  (tb_clk),
     .rst  (~tb_rst_n),
-    .utmi (usb_utmi.sie)
+    .utmi (usb_utmi.pe)
 );
 
