@@ -1,8 +1,8 @@
 //==============================================================================
-// USB 2.0 Transceiver Macrocel (UTM) FS Only implementation with 
+// USB 2.0 Transceiver Macrocel (UTM) FS Only implementation with
 // 8 bit interface. All references to UTMI specification, version 1.05.
 //
-// The main differences from the reference are: analog frontend and clock 
+// The main differences from the reference are: analog frontend and clock
 // generator are placed outside the usb block.
 //
 //------------------------------------------------------------------------------
