@@ -10,7 +10,7 @@
 //-----------------------------------------------------------------------------
 // Testbench control
 //-----------------------------------------------------------------------------
-initial 
+initial
 begin : tb_ctrl
     $display("### Test started ###");
     $display("Test description: %s\n", `TEST_DESCR);
@@ -21,7 +21,7 @@ begin : tb_ctrl
         $display("\n### Test FAIL ###");
     else
         $display("\n### Test OK ###");
-    $stop;    
+    $stop;
 end
 
 //-----------------------------------------------------------------------------

@@ -5,7 +5,7 @@
 // [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
 //==============================================================================
 
-import usb_utmi_pkg::*;
+import usb_pkg::*;
 
 module usb_host_beh (
     // USB lines
@@ -21,8 +21,8 @@ localparam USB_JIT    = 100;     // ps
 `define USB_PERIOD_DEL  ((USB_PERIOD + ($urandom_range(0, USB_JIT*2) - USB_JIT))/1000.0)
 `define USB_PHASE_DEL   ($urandom_range(0, USB_JIT*2)/1000.0)
 
-localparam USB_RAW_PACKET_BYTES = 1024;
-localparam USB_RAW_PACKET_BITS  = USB_RAW_PACKET_BYTES*8;
+localparam USB_RAW_BYTES = 1024;
+localparam USB_RAW_BITS  = USB_RAW_BYTES*8;
 
 //-----------------------------------------------------------------------------
 // Connections
@@ -102,7 +102,7 @@ end
 endtask : send_raw_se0
 
 task send_raw_packet(
-    input logic [USB_RAW_PACKET_BITS-1:0] data,
+    input logic [USB_RAW_BITS-1:0] data,
     input int len
 );
 bit enc_nrzi_bit;
@@ -149,21 +149,21 @@ end
 endtask : send_raw_packet
 
 task receive_raw_packet (
-    output logic [USB_RAW_PACKET_BITS-1:0] data,
+    output logic [USB_RAW_BITS-1:0] data,
     output int len
 );
-utmi_line_state_t [7:0]         line_state_hist;
+usb_line_state_t [7:0]         line_state_hist;
 int                             unstuff_cnt;
 int                             bit_cnt;
-logic [USB_RAW_PACKET_BITS-1:0] bit_data;
+logic [USB_RAW_BITS-1:0] bit_data;
 begin
     bit_cnt = 0;
     bit_data = '0;
-    line_state_hist = {8{UTMI_LS_DJ}};
+    line_state_hist = {8{USB_LS_J}};
 
     // wait for sync pattern
     while (line_state_hist != USB_SYNC_PATTERN) begin
-        line_state_hist = {line_state_hist[6:0], utmi_line_state_t'({dn_rx, dp_rx})};
+        line_state_hist = {line_state_hist[6:0], usb_line_state_t'({dn_rx, dp_rx})};
         #`USB_PERIOD_DEL;
     end
 
@@ -171,14 +171,14 @@ begin
 
     // get data
     while (line_state_hist[2:0] != USB_EOP_PATTERN) begin
-        line_state_hist = {line_state_hist[6:0], utmi_line_state_t'({dn_rx, dp_rx})};
+        line_state_hist = {line_state_hist[6:0], usb_line_state_t'({dn_rx, dp_rx})};
 
         if (line_state_hist[2:0] == USB_EOP_PATTERN) begin
-            if (line_state_hist[3] == UTMI_LS_SE0)
+            if (line_state_hist[3] == USB_LS_SE0)
                 $display("%0d, W: %m: Warning, EOP must have 2 se0 bits!", $time);
             break;
         end
-        else if (line_state_hist[0] == UTMI_LS_SE0) begin
+        else if (line_state_hist[0] == USB_LS_SE0) begin
             //continue;
         end else if (unstuff_cnt == USB_STUFF_BITS_N) begin
             if (line_state_hist[0] == line_state_hist[1])
@@ -188,10 +188,10 @@ begin
             bit_cnt = bit_cnt + 1;
             // NRZI decoding and bit stuffing control
             if (line_state_hist[0] == line_state_hist[1]) begin
-                bit_data = {1'b1, bit_data[USB_RAW_PACKET_BITS-1:1]};
+                bit_data = {1'b1, bit_data[USB_RAW_BITS-1:1]};
                 unstuff_cnt = unstuff_cnt + 1;
             end else begin
-                bit_data = {1'b0, bit_data[USB_RAW_PACKET_BITS-1:1]};
+                bit_data = {1'b0, bit_data[USB_RAW_BITS-1:1]};
                 unstuff_cnt = 0;
             end
         end
@@ -200,7 +200,7 @@ begin
     end
 
     // shift lsb to the array bottom
-    bit_data = bit_data >> (USB_RAW_PACKET_BITS - bit_cnt);
+    bit_data = bit_data >> (USB_RAW_BITS - bit_cnt);
 
     data = bit_data;
     len  = bit_cnt/8;

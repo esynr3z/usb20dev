@@ -1,15 +1,15 @@
 //==============================================================================
-// Testbench body for UTM test
+// Testbench body for SIE test
 //
 //------------------------------------------------------------------------------
 // [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
 //==============================================================================
 
 `include "../testbenches/tb_header.svh"
-`include "../testbenches/tb_dut_utm.svh"
+`include "../testbenches/tb_dut_sie.svh"
 
 //`define STOP_TIME  100ms   // Time when test stops
-`define TEST_DESCR "UTM test - receive, transmit and special cases"
+`define TEST_DESCR "SIE test - receive, transmit and special cases"
 `define RND_CYCLES 1000
 
 //-----------------------------------------------------------------------------
@@ -68,7 +68,6 @@ endclass : packet_tester_t
 
 initial
 begin : tb_body
-    //paste to ncim console to view variables
     packet_tester_t ptester = new;
 
     tb_err = 0; // no errors
@@ -79,13 +78,13 @@ begin : tb_body
     //Test start
     #100ns tb_busy = 1;
 
-    $display("%0d, I: %m: PE --> UTM --> Host", $time);
+    $display("%0d, I: %m: VIP --> SIE --> Host", $time);
     for (int i = 0; i < `RND_CYCLES; i++) begin : crv_tx
         ptester.randomize();
         $display("%0d, I: %m: Cycle %0d, %0d bytes to transmit", $time, i, ptester.tx_len);
 
         fork
-            tb.pe_beh.send_data(ptester.tx_data, ptester.tx_len);
+            tb.sie_vip.send_data(ptester.tx_data, ptester.tx_len);
             tb.host_beh.receive_raw_packet(ptester.rx_data, ptester.rx_len);
         join
 
@@ -95,14 +94,14 @@ begin : tb_body
             tb_err++;
     end : crv_tx
 
-    $display("%0d, I: %m: PE <-- UTM <-- Host", $time);
+    $display("%0d, I: %m: VIP <-- SIE <-- Host", $time);
     for (int i = 0; i < `RND_CYCLES; i++) begin : crv_rx
         ptester.randomize();
         $display("%0d, I: %m: Cycle %0d, %0d bytes to receive", $time, i, ptester.tx_len);
 
         fork
             tb.host_beh.send_raw_packet(ptester.tx_data, ptester.tx_len);
-            tb.pe_beh.receive_data(ptester.rx_data, ptester.rx_len);
+            tb.sie_vip.receive_data(ptester.rx_data, ptester.rx_len);
         join
 
         if (!ptester.is_len_eq())

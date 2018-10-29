@@ -18,7 +18,7 @@ initial
 begin : tb_body
     //Reset
     wait(tb_rst_n);
-    
+
     //Test start
     #100ns tb_busy = 1;
 

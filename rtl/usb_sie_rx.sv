@@ -1,5 +1,5 @@
 //==============================================================================
-// UTM receive side:
+// SIE receive side:
 //   - data recovery from line states
 //   - NRZI decoder
 //   - bit unstuffer
@@ -9,37 +9,34 @@
 // [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
 //==============================================================================
 
-import usb_utmi_pkg::*;
+import usb_pkg::*;
 
-module usb_utm_rx (
-    input  logic             clk,           // Clock
-    input  logic             rst,           // Asynchronous reset
+module usb_sie_rx (
+    input  logic    clk,       // Clock
+    input  logic    rst,       // Asynchronous reset
 
     // Frontend rx
-    input  logic             dn_rx,         // USB Data- input
-    input  logic             dp_rx,         // USB Data+ input
+    input  logic    dn_rx,     // USB Data- input
+    input  logic    dp_rx,     // USB Data+ input
 
-    // UTMI rx
-    input  logic             tx_active,     // Transmit state machine is active
-    input  logic             suspend_m,     // Places the Macrocell in a suspend mode
-    output utmi_line_state_t line_state,    // Signal to reflect the current state of the recievers
-    output bus8_t            data_out,      // USB data output bus
-    output logic             rx_valid,      // data_out bus has valid data
-    output logic             rx_active,     // Receive state machine is active
-    output logic             rx_error       // Receive error detection
+    // SIE rx
+    input  logic    tx_active, // Transmit state machine is active
+    output bus8_t   rx_data,   // USB data output bus
+    output logic    rx_valid,  // rx_data bus has valid data
+    output logic    rx_active, // Receive state machine is active
+    output logic    rx_error,  // Receive error detection
+    output logic    bus_reset  // Bus reset active
 );
 
 localparam LINE_STATE_HIST_LEN = 3;
-
-int i;
 
 //-----------------------------------------------------------------------------
 // Line state recovery
 //-----------------------------------------------------------------------------
 // Double-flop synchronization for input data lines
 logic [3:0]       line_pair_ff;
-utmi_line_state_t line_pair;
-utmi_line_state_t line_state_curr;
+usb_line_state_t line_pair;
+usb_line_state_t line_state_curr;
 logic             line_trans;
 logic             line_idle;
 logic             detect_eop;
@@ -52,7 +49,7 @@ begin
         line_pair_ff <= {line_pair_ff[1:0], dn_rx, dp_rx};
 end
 
-assign line_pair = utmi_line_state_t'(line_pair_ff[3:2]);
+assign line_pair = usb_line_state_t'(line_pair_ff[3:2]);
 
 // We dont use true diff pair, so we have to handle data transition moments
 // and change line state one clock after transition.
@@ -71,7 +68,7 @@ end
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst)
-        line_state_curr <= UTMI_LS_DJ;
+        line_state_curr <= USB_LS_J;
     else if (line_trans)
         line_state_curr <= line_pair;
 end
@@ -91,13 +88,13 @@ end
 assign line_state_valid = (line_phase_cnt == 'b1) ? 1'b1 : 1'b0;
 
 // Push line states to the history buffer for NRZI decoding and EOP detection
-utmi_line_state_t [LINE_STATE_HIST_LEN-1:0] line_state_hist;
+usb_line_state_t [LINE_STATE_HIST_LEN-1:0] line_state_hist;
 
 always_ff @(posedge clk or posedge rst)
 begin
-    for (i = 0; i < LINE_STATE_HIST_LEN; i++) begin
+    for (int i = 0; i < LINE_STATE_HIST_LEN; i++) begin
         if (rst)
-            line_state_hist[i] <= UTMI_LS_DJ;
+            line_state_hist[i] <= USB_LS_J;
         else if (line_state_valid && (i == 0)) begin
             line_state_hist[i] <= line_state_curr;
         end else if (line_state_valid) begin
@@ -116,20 +113,20 @@ logic dec_nrzi_valid;
 
 always_comb
 begin
-    if ((line_state_hist[1] == UTMI_LS_DJ) &&
-        (line_state_hist[0] == UTMI_LS_DJ)) begin
+    if ((line_state_hist[1] == USB_LS_J) &&
+        (line_state_hist[0] == USB_LS_J)) begin
         dec_nrzi_bit   = 1'b1;
         dec_nrzi_valid = line_state_valid;
-    end else if ((line_state_hist[1] == UTMI_LS_DJ) &&
-                 (line_state_hist[0] == UTMI_LS_DK)) begin
+    end else if ((line_state_hist[1] == USB_LS_J) &&
+                 (line_state_hist[0] == USB_LS_K)) begin
         dec_nrzi_bit   = 1'b0;
         dec_nrzi_valid = line_state_valid;
-    end else if ((line_state_hist[1] == UTMI_LS_DK) &&
-                 (line_state_hist[0] == UTMI_LS_DJ)) begin
+    end else if ((line_state_hist[1] == USB_LS_K) &&
+                 (line_state_hist[0] == USB_LS_J)) begin
         dec_nrzi_bit   = 1'b0;
         dec_nrzi_valid = line_state_valid;
-    end else if ((line_state_hist[1] == UTMI_LS_DK) &&
-                 (line_state_hist[0] == UTMI_LS_DK)) begin
+    end else if ((line_state_hist[1] == USB_LS_K) &&
+                 (line_state_hist[0] == USB_LS_K)) begin
         dec_nrzi_bit   = 1'b1;
         dec_nrzi_valid = line_state_valid;
     end else begin
@@ -337,21 +334,19 @@ assign data_valid_pulse = data_valid && (!data_valid_ff);
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst) begin
-        data_out   <= '0;
+        rx_data    <= '0;
         rx_valid   <= 1'b0;
         rx_active  <= 1'b0;
         rx_error   <= 1'b0;
+        bus_reset  <= 1'b0;
     end else begin
-        data_out   <= data_hold;
+        rx_data    <= data_hold;
         rx_valid   <= data_valid_pulse;
         rx_active  <= data_active;
         rx_error   <= data_error;
+        // FIXME: line reset detection logic need to be implemented
+        bus_reset  <= 1'b0;
     end
 end
 
-// UTMI specification:
-//"LineState represents bus activity within 2 or 3 CLK times of the actual events on the bus"
-// But we don't use true diff receivers, so this time is 3-4 CLK cycles (look line_trans signal).
-assign line_state = line_state_curr;
-
-endmodule : usb_utm_rx
+endmodule : usb_sie_rx

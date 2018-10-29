@@ -1,81 +1,72 @@
 //==============================================================================
-// USB 2.0 FS Protocol Engine behavioral model
+// SIE Verification IP
 //
 //------------------------------------------------------------------------------
 // [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
 //==============================================================================
 
-import usb_utmi_pkg::*;
+import usb_pkg::*;
 
-module usb_pe_beh (
+module usb_sie_vip (
     input  logic    clk,        // Clock
     input  logic    rst,        // Asynchronous reset
 
-    usb_utmi_if.pe utmi         // UTMI
+    usb_sie_if.pe   sie_bus     // SIE Data Bus
 );
 
 //-----------------------------------------------------------------------------
 // Parameters and defines
 //-----------------------------------------------------------------------------
-localparam USB_RAW_PACKET_BYTES = 1024;
+localparam SIE_RAW_BYTES = 1024;
 
 //-----------------------------------------------------------------------------
 // Connections and init
 //-----------------------------------------------------------------------------
-// system bus
-logic             suspend_m;    // Places the Macrocell in a suspend mode
-utmi_op_mode_t    op_mode;      // Operational modes control
-bus8_t            data_in;
-logic             tx_valid;
-
 initial
 begin
-    utmi.suspend_m = '0;
-    utmi.op_mode   = UTMI_OM_NORMAL;
-    utmi.data_in   = '0;
-    utmi.tx_valid  = '0;
+    sie_bus.tx_data   = '0;
+    sie_bus.tx_valid  = '0;
 end
 
 //-----------------------------------------------------------------------------
-// UTMI line control tasks
+// Data control tasks
 //-----------------------------------------------------------------------------
 task send_data(
-    input bit [USB_RAW_PACKET_BYTES-1:0][7:0] data,
-    input int len
+    input bit [SIE_RAW_BYTES-1:0][7:0] data, // Data bytes
+    input int                          len   // Data bytes total
 );
 begin
     @(posedge clk);
     for (int i = 0; i < len; i++) begin
-        utmi.data_in  = data[i];
-        utmi.tx_valid = 1'b1;
+        sie_bus.tx_data  = data[i];
+        sie_bus.tx_valid = 1'b1;
         @(posedge clk);
-        while(!utmi.tx_ready)
+        while(!sie_bus.tx_ready)
             @(posedge clk);
     end
     @(posedge clk);
-    utmi.tx_valid = 1'b0;
+    sie_bus.tx_valid = 1'b0;
 end
 endtask : send_data
 
 task receive_data(
-    output logic [USB_RAW_PACKET_BYTES-1:0][7:0] data,
-    output int len
+    output logic [SIE_RAW_BYTES-1:0][7:0] data,  // Data bytes
+    output int                            len    // Data bytes total
 );
 begin
     data = 0;
-    len = 0;
-    wait(utmi.rx_active);
-    while(utmi.rx_active) begin
+    len  = 0;
+    wait(sie_bus.rx_active);
+    while(sie_bus.rx_active) begin
         @(posedge clk);
-        if (utmi.rx_active && utmi.rx_valid) begin
-            data[len] = utmi.data_out;
+        if (sie_bus.rx_active && sie_bus.rx_valid) begin
+            data[len] = sie_bus.rx_data;
             len++;
         end
-        if (utmi.rx_error)
+        if (sie_bus.rx_error)
             $display("%0d, W: %m: Warning, rx_error is active!", $time);
     end
 end
 endtask : receive_data
 
-
-endmodule : usb_pe_beh
+endmodule : usb_sie_vip

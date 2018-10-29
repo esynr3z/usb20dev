@@ -1,5 +1,5 @@
 //==============================================================================
-// UTM transmit side:
+// SIE transmit side:
 //   - NRZI encoder
 //   - bit stuffer
 //   - data to line states convert
@@ -9,23 +9,22 @@
 // [usb20dev] 2018 Eden Synrez <esynr3z@gmail.com>
 //==============================================================================
 
-import usb_utmi_pkg::*;
+import usb_pkg::*;
 
-module usb_utm_tx (
-    input  logic          clk,          // Clock
-    input  logic          rst,          // Asynchronous reset
+module usb_sie_tx (
+    input  logic    clk,        // Clock
+    input  logic    rst,        // Asynchronous reset
 
     // Frontend tx
-    output  logic         dp_tx,        // USB Data+ output
-    output  logic         dn_tx,        // USB Data- output
-    output  logic         tx_oen,       // USB Data output enable
+    output logic    dp_tx,      // USB Data+ output
+    output logic    dn_tx,      // USB Data- output
+    output logic    tx_oen,     // USB Data output enable
 
-    // UTMI tx
-    input  logic          suspend_m,    // Places the Macrocell in a suspend mode
-    input  utmi_op_mode_t op_mode,      // Operational modes control
-    input  bus8_t         data_in,      // USB data input bus
-    input  logic          tx_valid,     // Transmit data on data_in bus is valid
-    output logic          tx_ready      // UTM ready to load transmit data into holding registers
+    // SIE tx
+    input  bus8_t   tx_data,    // USB data input bus
+    input  logic    tx_valid,   // Transmit data on tx_data bus is valid
+    output logic    tx_ready,   // UTM ready to load transmit data into holding registers
+    output logic    tx_active   // Transmit state machine is active (from SYNC sending start to EOP sending end)
 );
 
 //-----------------------------------------------------------------------------
@@ -113,7 +112,7 @@ begin
 
             TX_DATA_LOAD_S : begin
                 if (tx_valid) begin
-                    data_hold      <= data_in;
+                    data_hold      <= tx_data;
                     data_hold_full <= 1'b1;
                     tx_ready       <= 1'b1;
                 end else if (!tx_valid && data_oen) begin
@@ -226,9 +225,9 @@ end
 always_ff @(posedge clk or posedge rst)
 begin
     if (rst || (!data_oen))
-        {dn_tx, dp_tx} <= UTMI_LS_DJ;
+        {dn_tx, dp_tx} <= USB_LS_J;
     else if (stuff_bit_valid && data_se0)
-        {dn_tx, dp_tx} <= UTMI_LS_SE0;
+        {dn_tx, dp_tx} <= USB_LS_SE0;
     else if (stuff_bit_valid)
         {dn_tx, dp_tx} <= {!enc_nrzi_bit, enc_nrzi_bit};
 end
@@ -252,4 +251,6 @@ begin
         tx_oen <= |data_oen_ff;
 end
 
-endmodule : usb_utm_tx
+assign tx_active = tx_oen;
+
+endmodule : usb_sie_tx

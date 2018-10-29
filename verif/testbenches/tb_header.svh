@@ -7,7 +7,7 @@
 
 // Include all helper tools
 `include "../helpers/usb_host_beh.sv"
-`include "../helpers/usb_pe_beh.sv"
+`include "../helpers/usb_sie_vip.sv"
 
 `timescale 1ns/1ps
 
