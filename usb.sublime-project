@@ -3,15 +3,15 @@
 	[
 		{
 			"name": "Sources",
-			"path": "../rtl"
+			"path": "rtl"
 		},
 		{
 			"name": "Testbenches",
-			"path": "./testbenches"
+			"path": "verif/testbenches"
 		},
 		{
 			"name": "Helpers",
-			"path": "./helpers"
+			"path": "verif/helpers"
 		},
 	],
 	"settings":
