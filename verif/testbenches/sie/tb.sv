@@ -110,6 +110,12 @@ begin : tb_body
             tb_err++;
     end : crv_rx
 
+    $display("%0d, I: %m: Host applying Reset", $time);
+    fork
+        tb.host_beh.send_reset();
+        tb.sie_vip.detect_reset();
+    join
+
     //Test end
     #3us tb_busy = 0;
 end

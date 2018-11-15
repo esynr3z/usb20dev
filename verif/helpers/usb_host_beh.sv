@@ -144,6 +144,7 @@ begin
     send_raw_se0();
     send_raw_se0();
     send_raw_j();
+    send_raw_nondrive();
     wait_interpacket_delay();
 end
 endtask : send_raw_packet
@@ -210,5 +211,14 @@ begin
     wait_interpacket_delay();
 end
 endtask : receive_raw_packet
+
+task send_reset;
+begin
+    send_raw_se0();
+    #10ms;
+    send_raw_j();
+    send_raw_nondrive();
+end
+endtask : send_reset
 
 endmodule : usb_host_beh

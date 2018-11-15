@@ -69,4 +69,16 @@ begin
 end
 endtask : receive_data
 
+task detect_reset;
+begin
+    while(!sie_bus.reset)
+        @(posedge clk);
+    $display("%0d, I: %m: Bus reset detected", $time);
+
+    while(sie_bus.reset)
+        @(posedge clk);
+    $display("%0d, I: %m: Bus reset released", $time);
+end
+endtask : detect_reset
+
 endmodule : usb_sie_vip

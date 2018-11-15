@@ -44,7 +44,7 @@ logic             detect_eop;
 always_ff @(posedge clk)
 begin
     if (rst)
-        line_pair_ff <= 4'b0101;
+        line_pair_ff <= {USB_LS_J, USB_LS_J};
     else
         line_pair_ff <= {line_pair_ff[1:0], dn_rx, dp_rx};
 end
@@ -329,6 +329,32 @@ end
 assign data_valid_pulse = data_valid && (!data_valid_ff);
 
 //-----------------------------------------------------------------------------
+// Bus reset detection
+//-----------------------------------------------------------------------------
+logic line_reset;
+bus8_t line_reset_cnt;
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst)
+        line_reset_cnt <= '0;
+    else if (!line_reset && (line_state_hist[0] == USB_LS_SE0))
+        line_reset_cnt <= line_reset_cnt + 'b1;
+    else
+        line_reset_cnt <= '0;
+end
+
+always_ff @(posedge clk or posedge rst)
+begin
+    if (rst)
+        line_reset <= 1'b0;
+    else if (!line_reset && (line_reset_cnt == '1))
+        line_reset <= 1'b1;
+    else if (line_reset && (line_state_hist[0] != USB_LS_SE0))
+        line_reset <= 1'b0;
+end
+
+//-----------------------------------------------------------------------------
 // Outputs registering stage
 //-----------------------------------------------------------------------------
 always_ff @(posedge clk or posedge rst)
@@ -344,8 +370,7 @@ begin
         rx_valid   <= data_valid_pulse;
         rx_active  <= data_active;
         rx_error   <= data_error;
-        // FIXME: line reset detection logic need to be implemented
-        bus_reset  <= 1'b0;
+        bus_reset  <= line_reset;
     end
 end
 
