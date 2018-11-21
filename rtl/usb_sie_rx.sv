@@ -79,7 +79,9 @@ logic       line_state_valid;
 
 always_ff @(posedge clk or posedge rst)
 begin
-    if (rst || line_trans)
+    if (rst)
+        line_phase_cnt <= '0;
+    else if (line_trans)
         line_phase_cnt <= '0;
     else
         line_phase_cnt <= line_phase_cnt + 'b1;
@@ -166,7 +168,9 @@ assign data_bit_valid = dec_nrzi_valid && (!unstuff_event || line_idle) && (!tx_
 
 always_ff @(posedge clk or posedge rst)
 begin
-    if (rst || detect_eop)
+    if (rst)
+        data_shift <= '1;
+    else if (detect_eop)
         data_shift <= '1;
     else if (data_bit_valid)
         data_shift <= {data_bit, data_shift[7:1]};

@@ -160,7 +160,9 @@ logic       data_bit_valid;
 
 always_ff @(posedge clk or posedge rst)
 begin
-    if (rst || (!data_oen))
+    if (rst)
+        data_bit_phase_cnt <= '1;
+    else if (!data_oen)
         data_bit_phase_cnt <= '1;
     else
         data_bit_phase_cnt <= data_bit_phase_cnt + 'b1;
@@ -170,7 +172,9 @@ assign data_bit_valid = (data_bit_phase_cnt == '1);
 
 always_ff @(posedge clk or posedge rst)
 begin
-    if (rst || (!data_oen))
+    if (rst)
+        data_bit <= 1'b0;
+    else if (!data_oen)
         data_bit <= 1'b0;
     else if (data_bit_strobe)
         data_bit <= data_shift[0];
@@ -197,7 +201,10 @@ assign stuff_event     = (stuff_shift == '1);
 
 always_ff @(posedge clk or posedge rst)
 begin
-    if (rst || (!data_oen)) begin
+    if (rst) begin
+        stuff_bit       <= 1'b0;
+        stuff_bit_valid <= 1'b0;
+    end else if (!data_oen) begin
         stuff_bit       <= 1'b0;
         stuff_bit_valid <= 1'b0;
     end else begin
@@ -213,9 +220,11 @@ logic enc_nrzi_bit;
 
 always_ff @(posedge clk or posedge rst)
 begin
-    if (rst || (!data_oen)) begin
+    if (rst)
         enc_nrzi_bit <= 1'b1;
-    end else if (stuff_bit_valid && (stuff_bit == 1'b0))
+    else if (!data_oen)
+        enc_nrzi_bit <= 1'b1;
+    else if (stuff_bit_valid && (stuff_bit == 1'b0))
         enc_nrzi_bit <= ~enc_nrzi_bit;
 end
 
@@ -224,7 +233,9 @@ end
 //-----------------------------------------------------------------------------
 always_ff @(posedge clk or posedge rst)
 begin
-    if (rst || (!data_oen))
+    if (rst)
+        {dn_tx, dp_tx} <= USB_LS_J;
+    else if (!data_oen)
         {dn_tx, dp_tx} <= USB_LS_J;
     else if (stuff_bit_valid && data_se0)
         {dn_tx, dp_tx} <= USB_LS_SE0;
