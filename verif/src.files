@@ -5,3 +5,5 @@
 ../../rtl/usb_sie.sv
 ../../rtl/usb_sie_rx.sv
 ../../rtl/usb_sie_tx.sv
+../../rtl/usb_crc5.sv
+../../rtl/usb_crc16.sv

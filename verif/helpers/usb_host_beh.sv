@@ -153,9 +153,9 @@ task receive_raw_packet (
     output logic [USB_RAW_BITS-1:0] data,
     output int len
 );
-usb_line_state_t [7:0]         line_state_hist;
-int                             unstuff_cnt;
-int                             bit_cnt;
+usb_line_state_t [7:0]   line_state_hist;
+int                      unstuff_cnt;
+int                      bit_cnt;
 logic [USB_RAW_BITS-1:0] bit_data;
 begin
     bit_cnt = 0;
@@ -220,5 +220,61 @@ begin
     send_raw_nondrive();
 end
 endtask : send_reset
+
+logic [4:0]  crc5 = '1;
+task step_crc5(
+    input  [7:0] dbyte,
+    output [4:0] crc_o
+);
+const bit [4:0] crc5_poly = 5'b00101;
+begin
+    for (int i = 0; i < 8; i++)
+    begin
+        if (crc5[4] ^ dbyte[i])
+            crc5 = (crc5 << 1) ^ crc5_poly;
+        else
+            crc5 = crc5 << 1;
+    end
+    crc_o = crc5;
+end
+endtask : step_crc5
+
+task valid_crc5(
+    input [4:0] crc5,
+    output      valid
+);
+const bit [4:0] crc5_res  = USB_CRC5_VALID;
+begin
+    valid = (crc5_res == crc5);
+end
+endtask : valid_crc5
+
+logic [15:0]  crc16 = '1;
+task step_crc16(
+    input  [7:0] dbyte,
+    output [15:0] crc_o
+);
+const bit [15:0] crc16_poly = 16'b1000000000000101;
+begin
+    for (int i = 0; i < 8; i++)
+    begin
+        if (crc16[15] ^ dbyte[i])
+            crc16 = (crc16 << 1) ^ crc16_poly;
+        else
+            crc16 = crc16 << 1;
+    end
+    crc_o = crc16;
+end
+endtask : step_crc16
+
+task valid_crc16(
+    input [15:0] crc16,
+    output      valid
+);
+const bit [15:0] crc16_res = USB_CRC16_VALID;
+begin
+    valid = (crc16_res == crc16);
+end
+endtask : valid_crc16
 
 endmodule : usb_host_beh
