@@ -11,6 +11,7 @@ package usb_pkg;
 // Types
 //-----------------------------------------------------------------------------
 typedef logic [7:0]  bus8_t;
+typedef logic [15:0] bus16_t;
 typedef logic [31:0] bus32_t;
 
 typedef enum logic [1:0] {
@@ -33,5 +34,8 @@ parameter usb_line_state_t [7:0] USB_SYNC_PATTERN = {
 parameter usb_line_state_t [2:0] USB_EOP_PATTERN = {
     USB_LS_SE0, USB_LS_SE0, USB_LS_J
 };
+
+parameter logic [4:0] USB_CRC5_VALID  = 5'b01100;
+parameter bus16_t     USB_CRC16_VALID = 16'b1000000000001101;
 
 endpackage : usb_pkg
